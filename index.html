@@ -1,0 +1,2272 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101326">
+  <title>Spieleportal – Raum betreten</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101326;
+      color: #f5f6ff;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      min-height: 100svh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      padding: 32px 20px;
+      background:
+        radial-gradient(ellipse at 15% 12%, rgba(98, 84, 190, 0.2), transparent 35%),
+        radial-gradient(ellipse at 88% 88%, rgba(51, 133, 167, 0.14), transparent 34%),
+        #101326;
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      z-index: -1;
+      width: 270px;
+      height: 270px;
+      border: 1px solid rgba(183, 173, 255, 0.08);
+      border-radius: 50%;
+      content: "";
+      pointer-events: none;
+    }
+
+    body::before {
+      top: -125px;
+      right: -75px;
+      box-shadow: 0 0 0 34px rgba(183, 173, 255, 0.025), 0 0 0 70px rgba(183, 173, 255, 0.02);
+    }
+
+    body::after {
+      bottom: -160px;
+      left: -105px;
+      width: 360px;
+      height: 360px;
+      box-shadow: 0 0 0 45px rgba(104, 194, 211, 0.025);
+    }
+
+    main {
+      width: min(100%, 900px);
+    }
+
+    .card {
+      padding: 44px;
+      border: 1px solid rgba(204, 207, 239, 0.13);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(35, 38, 62, 0.96), rgba(25, 27, 47, 0.98));
+      box-shadow: 0 28px 90px rgba(3, 4, 14, 0.44), inset 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .login-card {
+      width: min(100%, 438px);
+      margin-inline: auto;
+    }
+
+    .home-card[hidden] {
+      display: none;
+    }
+
+    .game-page[hidden] {
+      display: none;
+    }
+
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .home-header h1 {
+      margin: 0;
+      font-size: 1.7rem;
+    }
+
+    .logout {
+      padding: 9px 14px;
+      border: 1px solid rgba(191, 194, 224, 0.2);
+      border-radius: 9px;
+      background: rgba(14, 16, 31, 0.5);
+      color: #e5e6f3;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .logout:hover {
+      background: rgba(14, 16, 31, 0.85);
+    }
+
+    .logout:focus-visible {
+      outline: 3px solid rgba(180, 168, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .game-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .scoreboard {
+      margin: 0 0 24px;
+      padding: 16px 18px;
+      border: 1px solid rgba(204, 207, 239, 0.13);
+      border-radius: 12px;
+      background: rgba(14, 16, 31, 0.42);
+    }
+
+    .scoreboard h2 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+    }
+
+    .scoreboard table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .scoreboard th,
+    .scoreboard td {
+      padding: 7px 0;
+    }
+
+    .scoreboard th:last-child,
+    .scoreboard td:last-child {
+      text-align: right;
+    }
+
+    .scoreboard tbody tr + tr {
+      border-top: 1px solid rgba(204, 207, 239, 0.1);
+    }
+
+    .game-link {
+      width: 100%;
+      padding: 16px 18px;
+      border: 1px solid rgba(204, 207, 239, 0.13);
+      border-radius: 12px;
+      background: rgba(14, 16, 31, 0.42);
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+    }
+
+    .game-link:hover {
+      border-color: rgba(180, 168, 255, 0.55);
+      background: rgba(14, 16, 31, 0.72);
+    }
+
+    .game-link:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .game-link:focus-visible,
+    .game-control:focus-visible,
+    .game-cell:focus-visible,
+    .find-match-item:focus-visible {
+      outline: 3px solid rgba(180, 168, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .game-page {
+      width: min(100%, 500px);
+      margin-inline: auto;
+    }
+
+    .game-status {
+      min-height: 1.5em;
+      margin: 0 0 18px;
+      color: #e5e6f3;
+      font-size: 1rem;
+      font-weight: 650;
+      text-align: center;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      width: min(100%, 390px);
+      margin: 0 auto;
+    }
+
+    .game-cell {
+      display: grid;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid rgba(204, 207, 239, 0.16);
+      border-radius: 16px;
+      background: rgba(14, 16, 31, 0.58);
+      color: #b4a8ff;
+      cursor: pointer;
+      font: inherit;
+      font-size: clamp(2.8rem, 14vw, 4.5rem);
+      font-weight: 750;
+      line-height: 1;
+    }
+
+    .game-cell:hover:empty {
+      background: rgba(157, 140, 255, 0.12);
+    }
+
+    .game-cell[data-mark="O"] {
+      color: #8dd9e8;
+    }
+
+    .game-cell.winning-cell {
+      border-color: #a7e8c0;
+      background: rgba(101, 201, 142, 0.15);
+    }
+
+    .game-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .game-control {
+      min-height: 42px;
+      padding: 9px 15px;
+      border: 1px solid rgba(191, 194, 224, 0.2);
+      border-radius: 9px;
+      background: rgba(14, 16, 31, 0.5);
+      color: #e5e6f3;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .game-control:hover {
+      background: rgba(14, 16, 31, 0.85);
+    }
+
+    .game-control:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .battleship-page {
+      width: min(100%, 980px);
+      margin-inline: auto;
+    }
+
+    .yatzy-page {
+      width: min(100%, 760px);
+      margin-inline: auto;
+    }
+
+    .yatzy-page[hidden] {
+      display: none;
+    }
+
+    .yatzy-dice {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .yatzy-die {
+      display: grid;
+      width: clamp(48px, 12vw, 68px);
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid rgba(204, 207, 239, 0.2);
+      border-radius: 13px;
+      background: rgba(14, 16, 31, 0.58);
+      color: #f5f6ff;
+      font: inherit;
+      font-size: 2rem;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .yatzy-die.held {
+      border-color: #b4a8ff;
+      background: rgba(157, 140, 255, 0.28);
+      transform: translateY(-4px);
+    }
+
+    .yatzy-die:disabled {
+      cursor: default;
+      opacity: 0.65;
+    }
+
+    .yatzy-table-wrap {
+      overflow-x: auto;
+    }
+
+    .yatzy-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .yatzy-table th,
+    .yatzy-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(204, 207, 239, 0.1);
+    }
+
+    .yatzy-table th:first-child,
+    .yatzy-table td:first-child {
+      text-align: left;
+    }
+
+    .yatzy-score-button {
+      min-width: 38px;
+      min-height: 34px;
+      border: 1px solid rgba(191, 194, 224, 0.2);
+      border-radius: 7px;
+      background: rgba(14, 16, 31, 0.5);
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .yatzy-score-button:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+
+    .yatzy-score-button:not(:disabled):hover {
+      border-color: rgba(180, 168, 255, 0.7);
+      background: rgba(157, 140, 255, 0.2);
+    }
+
+    .yatzy-total th,
+    .yatzy-total td {
+      font-weight: 750;
+    }
+
+    .find-match-page {
+      width: min(100%, 860px);
+      margin-inline: auto;
+    }
+
+    .find-match-page[hidden] {
+      display: none;
+    }
+
+    .find-match-scores {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin: 0 0 18px;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .find-match-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .find-match-side h2 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .find-match-card {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      min-height: 210px;
+      padding: 14px;
+      border: 1px solid rgba(204, 207, 239, 0.13);
+      border-radius: 14px;
+      background: rgba(14, 16, 31, 0.42);
+    }
+
+    .find-match-item {
+      display: grid;
+      min-width: 0;
+      min-height: 78px;
+      place-items: center;
+      padding: 4px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.025);
+      cursor: pointer;
+    }
+
+    .find-match-item:not(:disabled):hover {
+      border-color: rgba(180, 168, 255, 0.6);
+      background: rgba(157, 140, 255, 0.12);
+    }
+
+    .find-match-item:disabled {
+      cursor: default;
+    }
+
+    .memory-page {
+      width: min(100%, 620px);
+      margin-inline: auto;
+    }
+
+    .memory-page[hidden] {
+      display: none;
+    }
+
+    .memory-scores {
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      margin: 0 0 18px;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .memory-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      width: min(100%, 480px);
+      margin: 0 auto;
+    }
+
+    .memory-card {
+      display: grid;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid rgba(204, 207, 239, 0.16);
+      border-radius: 14px;
+      background: rgba(14, 16, 31, 0.58);
+      color: #f5f6ff;
+      cursor: pointer;
+      font: inherit;
+      font-size: clamp(1.8rem, 8vw, 3rem);
+    }
+
+    .memory-card:not(:disabled):hover {
+      border-color: rgba(180, 168, 255, 0.6);
+      background: rgba(157, 140, 255, 0.12);
+    }
+
+    .memory-card:disabled {
+      cursor: default;
+    }
+
+    .memory-card.matched {
+      border-color: rgba(167, 232, 192, 0.55);
+      background: rgba(101, 201, 142, 0.15);
+    }
+
+    .memory-card:focus-visible {
+      outline: 3px solid rgba(180, 168, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .find-match-item svg {
+      flex: none;
+      max-width: 100%;
+      max-height: 58px;
+    }
+
+    @media (max-width: 480px) {
+      .find-match-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .find-match-card {
+        min-height: 170px;
+      }
+    }
+
+    .battleship-page[hidden] {
+      display: none;
+    }
+
+    .fleet-boards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px;
+    }
+
+    .fleet-section h2 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    .fleet-board {
+      display: grid;
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      grid-template-rows: repeat(15, minmax(0, 1fr));
+      gap: 3px;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+      touch-action: none;
+    }
+
+    .sea-cell {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      padding: 0;
+      border: 1px solid rgba(204, 207, 239, 0.13);
+      border-radius: 4px;
+      background: rgba(47, 93, 128, 0.38);
+      color: #f5f6ff;
+      cursor: pointer;
+      appearance: none;
+      font: inherit;
+      font-size: clamp(0.58rem, 2vw, 0.95rem);
+      font-weight: 750;
+      line-height: 1;
+    }
+
+    .sea-cell:not(:disabled):hover {
+      border-color: rgba(180, 168, 255, 0.8);
+      background: rgba(76, 132, 168, 0.55);
+    }
+
+    .sea-cell:disabled {
+      cursor: default;
+    }
+
+    .sea-cell.ship {
+      background: rgba(157, 140, 255, 0.38);
+    }
+
+    .sea-cell.selected {
+      border-color: #fff;
+      background: rgba(180, 168, 255, 0.8);
+      box-shadow: inset 0 0 0 1px #fff;
+    }
+
+    .sea-cell.hit {
+      border-color: #ff9b9b;
+      background: rgba(195, 70, 88, 0.72);
+      color: #fff;
+    }
+
+    .sea-cell.sunk,
+    .sea-cell.sunk.hit {
+      border-color: #a7e8c0;
+      background: rgba(74, 158, 113, 0.82);
+      color: #fff;
+    }
+
+    .sea-cell.dragging {
+      opacity: 0.35;
+    }
+
+    .sea-cell.preview-valid {
+      border-color: #a7e8c0;
+      background: rgba(74, 158, 113, 0.72);
+    }
+
+    .sea-cell.preview-invalid {
+      border-color: #ff9b9b;
+      background: rgba(195, 70, 88, 0.72);
+    }
+
+    .sea-cell.miss {
+      background: rgba(111, 157, 183, 0.24);
+      color: #9dd9ee;
+    }
+
+    .battleship-page .game-status {
+      margin-top: -8px;
+    }
+
+    .yatzy-page .game-status {
+      margin-top: -8px;
+    }
+
+    .field {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 9px;
+      color: #e5e6f3;
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    select,
+    input {
+      width: 100%;
+      min-height: 52px;
+      padding: 0 15px;
+      border: 1px solid rgba(191, 194, 224, 0.18);
+      border-radius: 12px;
+      outline: none;
+      background: rgba(14, 16, 31, 0.62);
+      color: #f5f6ff;
+      font: inherit;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    select {
+      padding-right: 42px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    select:invalid {
+      color: #858aa5;
+    }
+
+    select option {
+      background: #20223a;
+      color: #f5f6ff;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: rgba(180, 168, 255, 0.8);
+      background: rgba(14, 16, 31, 0.86);
+      box-shadow: 0 0 0 4px rgba(157, 140, 255, 0.13);
+    }
+
+    .select-chevron {
+      position: absolute;
+      top: 50%;
+      right: 16px;
+      width: 14px;
+      height: 14px;
+      color: #a8abc2;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    .submit:focus-visible {
+      outline: 3px solid rgba(180, 168, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .submit {
+      display: flex;
+      width: 100%;
+      min-height: 54px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 28px;
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(100deg, #a596ff, #8273e9);
+      box-shadow: 0 10px 24px rgba(123, 105, 225, 0.2);
+      color: #17152d;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 750;
+      transition: filter 160ms ease, transform 160ms ease;
+    }
+
+    .submit:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .submit:active {
+      transform: translateY(0);
+    }
+
+    .status {
+      margin: 16px 0 0;
+      color: #ffd59f;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .status[data-state="success"] {
+      color: #a7e8c0;
+    }
+
+    .status[hidden] {
+      display: none;
+    }
+
+    .submit svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 34px 25px;
+        border-radius: 20px;
+      }
+
+      .home-header {
+        margin-bottom: 22px;
+      }
+
+      .fleet-boards {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .fleet-board {
+        max-width: min(100%, 360px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card login-card" id="login-page">
+      <form id="login-form">
+        <div class="field">
+          <label for="room-code">Raumcode</label>
+          <div class="input-wrap">
+            <input id="room-code" name="room-code" type="text" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="z. B. ABCD2345">
+          </div>
+        </div>
+
+        <div class="game-actions">
+          <button class="submit" id="create-room" type="submit" value="create">Neuen Raum erstellen</button>
+          <button class="game-control" id="join-room" type="submit" value="join">Mit Raumcode beitreten</button>
+        </div>
+        <p class="status" id="login-status" role="status" aria-live="polite" hidden></p>
+      </form>
+    </section>
+    <section class="card home-card" id="home-page" aria-labelledby="home-title" hidden>
+      <header class="home-header">
+        <h1 id="home-title">Spiele</h1>
+        <button class="logout" id="logout" type="button">Raum verlassen</button>
+      </header>
+      <p class="status" id="room-code-display" role="status">Raumcode: <strong id="active-room-code"></strong> – teile ihn mit dem zweiten Spieler.</p>
+      <p class="status" id="portal-status" role="status" aria-live="polite" hidden></p>
+      <section class="scoreboard" aria-labelledby="scoreboard-title">
+        <h2 id="scoreboard-title">Scoreboard</h2>
+        <table>
+          <thead>
+            <tr><th scope="col">Account</th><th scope="col">Siege</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Sonni</th><td id="sonni-wins">0</td></tr>
+            <tr><th scope="row">Felix</th><td id="felix-wins">0</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <ul class="game-list">
+        <li><button class="game-link" id="open-tic-tac-toe" type="button">Tic-Tac-Toe</button></li>
+        <li><button class="game-link" id="open-battleship" type="button">Schiffe versenken</button></li>
+        <li><button class="game-link" id="open-yatzy" type="button">Yatzy</button></li>
+        <li><button class="game-link" id="open-find-match" type="button">Find Match</button></li>
+        <li><button class="game-link" id="open-memory" type="button">Memory mit Tieren</button></li>
+      </ul>
+    </section>
+    <section class="card game-page" id="tic-tac-toe-page" aria-labelledby="game-title" hidden>
+      <header class="home-header">
+        <h1 id="game-title">Tic-Tac-Toe</h1>
+        <button class="logout" id="back-to-games" type="button">Zurück</button>
+      </header>
+      <p class="game-status" id="game-status" role="status" aria-live="polite">X ist dran</p>
+      <div class="board" id="board" role="group" aria-label="Tic-Tac-Toe Spielfeld">
+        <button class="game-cell" type="button" aria-label="Feld 1"></button>
+        <button class="game-cell" type="button" aria-label="Feld 2"></button>
+        <button class="game-cell" type="button" aria-label="Feld 3"></button>
+        <button class="game-cell" type="button" aria-label="Feld 4"></button>
+        <button class="game-cell" type="button" aria-label="Feld 5"></button>
+        <button class="game-cell" type="button" aria-label="Feld 6"></button>
+        <button class="game-cell" type="button" aria-label="Feld 7"></button>
+        <button class="game-cell" type="button" aria-label="Feld 8"></button>
+        <button class="game-cell" type="button" aria-label="Feld 9"></button>
+      </div>
+      <div class="game-actions">
+        <button class="game-control" id="restart-game" type="button">Neustart</button>
+      </div>
+    </section>
+    <section class="card battleship-page" id="battleship-page" aria-labelledby="battleship-title" hidden>
+      <header class="home-header">
+        <h1 id="battleship-title">Schiffe versenken</h1>
+        <button class="logout" id="back-from-battleship" type="button">Zurück</button>
+      </header>
+      <p class="game-status" id="battleship-status" role="status" aria-live="polite">Wähle ein Schiff und dann sein Zielfeld.</p>
+      <div class="fleet-boards">
+        <section class="fleet-section" aria-labelledby="enemy-board-title">
+          <h2 id="enemy-board-title">Gegner</h2>
+          <div class="fleet-board" id="enemy-board" role="group" aria-label="Gegnerisches Spielfeld"></div>
+        </section>
+        <section class="fleet-section" aria-labelledby="player-board-title">
+          <h2 id="player-board-title">Deine Flotte</h2>
+          <div class="fleet-board" id="player-board" role="group" aria-label="Eigenes Spielfeld"></div>
+        </section>
+      </div>
+      <div class="game-actions">
+        <button class="game-control" id="rotate-ship" type="button" disabled>Drehen</button>
+        <button class="game-control" id="start-battleship" type="button">Bereit</button>
+        <button class="game-control" id="restart-battleship" type="button">Neustart</button>
+      </div>
+    </section>
+    <section class="card yatzy-page" id="yatzy-page" aria-labelledby="yatzy-title" hidden>
+      <header class="home-header">
+        <h1 id="yatzy-title">Yatzy</h1>
+        <button class="logout" id="back-from-yatzy" type="button">Zurück</button>
+      </header>
+      <p class="game-status" id="yatzy-status" role="status" aria-live="polite">Sonni ist dran.</p>
+      <div class="yatzy-dice" id="yatzy-dice" role="group" aria-label="Würfel"></div>
+      <div class="game-actions">
+        <button class="game-control" id="roll-yatzy" type="button">Würfeln (0/3)</button>
+        <button class="game-control" id="restart-yatzy" type="button">Neustart</button>
+      </div>
+      <div class="yatzy-table-wrap">
+        <table class="yatzy-table">
+          <thead>
+            <tr><th scope="col">Kategorie</th><th scope="col">Sonni</th><th scope="col">Felix</th></tr>
+          </thead>
+          <tbody id="yatzy-scorecard"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card find-match-page" id="find-match-page" aria-labelledby="find-match-title" hidden>
+      <header class="home-header">
+        <h1 id="find-match-title">Find Match</h1>
+        <button class="logout" id="back-from-find-match" type="button">Zurück</button>
+      </header>
+      <div class="find-match-scores" aria-live="polite">
+        <span>Sonni: <strong id="find-match-sonni-score">0</strong></span>
+        <span>Felix: <strong id="find-match-felix-score">0</strong></span>
+      </div>
+      <p class="game-status" id="find-match-status" role="status" aria-live="polite">Warte auf den Gegner.</p>
+      <div class="find-match-cards">
+        <section class="find-match-side" aria-labelledby="find-match-felix-title">
+          <h2 id="find-match-felix-title">Felix – links</h2>
+          <div class="find-match-card" id="find-match-card-0" role="group" aria-label="Felix' Seite"></div>
+        </section>
+        <section class="find-match-side" aria-labelledby="find-match-sonni-title">
+          <h2 id="find-match-sonni-title">Sonni – rechts</h2>
+          <div class="find-match-card" id="find-match-card-1" role="group" aria-label="Sonnis Seite"></div>
+        </section>
+      </div>
+      <div class="game-actions">
+        <button class="game-control" id="restart-find-match" type="button">Neustart</button>
+      </div>
+    </section>
+    <section class="card memory-page" id="memory-page" aria-labelledby="memory-title" hidden>
+      <header class="home-header">
+        <h1 id="memory-title">Memory mit Tieren</h1>
+        <button class="logout" id="back-from-memory" type="button">Zurück</button>
+      </header>
+      <div class="memory-scores" aria-live="polite">
+        <span>Sonni: <strong id="memory-sonni-score">0</strong></span>
+        <span>Felix: <strong id="memory-felix-score">0</strong></span>
+      </div>
+      <p class="game-status" id="memory-status" role="status" aria-live="polite">Warte auf den Gegner.</p>
+      <div class="memory-board" id="memory-board" role="group" aria-label="Memory-Spielfeld mit 24 Tierkarten"></div>
+      <div class="game-actions">
+        <button class="game-control" id="restart-memory" type="button">Neustart</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.querySelector("#login-form");
+    const loginPage = document.querySelector("#login-page");
+    const homePage = document.querySelector("#home-page");
+    const gamePage = document.querySelector("#tic-tac-toe-page");
+    const battleshipPage = document.querySelector("#battleship-page");
+    const yatzyPage = document.querySelector("#yatzy-page");
+    const findMatchPage = document.querySelector("#find-match-page");
+    const memoryPage = document.querySelector("#memory-page");
+    const roomCodeInput = document.querySelector("#room-code");
+    const status = document.querySelector("#login-status");
+    const portalStatus = document.querySelector("#portal-status");
+    const sonniWins = document.querySelector("#sonni-wins");
+    const felixWins = document.querySelector("#felix-wins");
+    const logout = document.querySelector("#logout");
+    const openTicTacToe = document.querySelector("#open-tic-tac-toe");
+    const backToGames = document.querySelector("#back-to-games");
+    const restartGame = document.querySelector("#restart-game");
+    const gameStatus = document.querySelector("#game-status");
+    const cells = [...document.querySelectorAll(".game-cell")];
+    const openBattleship = document.querySelector("#open-battleship");
+    const openYatzy = document.querySelector("#open-yatzy");
+    const backFromBattleship = document.querySelector("#back-from-battleship");
+    const restartBattleship = document.querySelector("#restart-battleship");
+    const battleshipStatus = document.querySelector("#battleship-status");
+    const enemyBoardElement = document.querySelector("#enemy-board");
+    const playerBoardElement = document.querySelector("#player-board");
+    const backFromYatzy = document.querySelector("#back-from-yatzy");
+    const yatzyStatus = document.querySelector("#yatzy-status");
+    const yatzyDiceElement = document.querySelector("#yatzy-dice");
+    const yatzyScorecard = document.querySelector("#yatzy-scorecard");
+    const rollYatzyButton = document.querySelector("#roll-yatzy");
+    const restartYatzyButton = document.querySelector("#restart-yatzy");
+    const openFindMatch = document.querySelector("#open-find-match");
+    const backFromFindMatch = document.querySelector("#back-from-find-match");
+    const restartFindMatch = document.querySelector("#restart-find-match");
+    const findMatchStatus = document.querySelector("#find-match-status");
+    const findMatchCards = [
+      document.querySelector("#find-match-card-0"),
+      document.querySelector("#find-match-card-1"),
+    ];
+    const findMatchSonniScore = document.querySelector("#find-match-sonni-score");
+    const findMatchFelixScore = document.querySelector("#find-match-felix-score");
+    const openMemory = document.querySelector("#open-memory");
+    const backFromMemory = document.querySelector("#back-from-memory");
+    const restartMemory = document.querySelector("#restart-memory");
+    const memoryStatus = document.querySelector("#memory-status");
+    const memoryBoard = document.querySelector("#memory-board");
+    const memorySonniScore = document.querySelector("#memory-sonni-score");
+    const memoryFelixScore = document.querySelector("#memory-felix-score");
+    const boardSize = 15;
+    const fleetSizes = [5, 4, 3, 3, 2, 2, 2];
+    const columnNames = "ABCDEFGHIJKLMNO";
+    const supportedPlayers = new Set(["sonni", "felix"]);
+    const activePageStoragePrefix = "spielportal-page-";
+    let currentAccount = null;
+    let currentRoom = null;
+    const localTestMode = window.location.protocol === "file:" ||
+      new URLSearchParams(window.location.search).get("test") === "local";
+    const localWins = { sonni: 0, felix: 0 };
+    let localGames = {};
+    let yatzyHeld = Array(5).fill(false);
+    let yatzyHeldPlayer = null;
+    let gameSocket = null;
+    let activeGame = null;
+    let playerFleet;
+    let enemyFleet;
+    let playerShots;
+    let enemyShots;
+    let findMatchState = null;
+    let battleshipFinished = false;
+    let battleStarted = false;
+    let battleshipState = null;
+    let selectedShipId = null;
+    let selectedHorizontal = true;
+    let shipDrag = null;
+    let sunkEnemyPositions = new Set();
+    const rotateShip = document.querySelector("#rotate-ship");
+    const startBattleshipButton = document.querySelector("#start-battleship");
+    const playerBoardTitle = document.querySelector("#player-board-title");
+    const enemyBoardTitle = document.querySelector("#enemy-board-title");
+    const winningLines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
+    ];
+    const yatzyCategories = [
+      ["ones", "Einser"], ["twos", "Zweier"], ["threes", "Dreier"],
+      ["fours", "Vierer"], ["fives", "Fünfer"], ["sixes", "Sechser"],
+      ["threeKind", "Dreierpasch"], ["fourKind", "Viererpasch"],
+      ["fullHouse", "Full House"], ["smallStraight", "Kleine Straße"],
+      ["largeStraight", "Große Straße"], ["chance", "Chance"], ["yatzy", "Yatzy"],
+    ];
+    const findMatchColors = {
+      "#ff6b6b": "Koralle",
+      "#ffd166": "Gelb",
+      "#06d6a0": "Türkis",
+      "#4cc9f0": "Blau",
+      "#b388ff": "Violett",
+      "#ff8fab": "Pink",
+    };
+    const findMatchShapes = ["circle", "square", "triangle", "diamond", "star"];
+    const memoryAnimals = ["🐶", "🐱", "🐭", "🐰", "🦊", "🐻", "🐼", "🐸", "🐵", "🐷", "🐮", "🐔"];
+    let board = Array(9).fill("");
+    let currentPlayer = "X";
+    let gameFinished = false;
+    let activePage = "login";
+
+    function renderFleetBoard(element, isPlayer) {
+      const shots = isPlayer ? enemyShots : playerShots;
+      const fleet = isPlayer ? playerFleet : enemyFleet;
+      element.replaceChildren();
+
+      for (let position = 0; position < boardSize * boardSize; position += 1) {
+        const cell = document.createElement("button");
+        const row = Math.floor(position / boardSize);
+        const column = position % boardSize;
+        const coordinate = `${columnNames[column]}${row + 1}`;
+        cell.className = "sea-cell";
+        cell.type = "button";
+        cell.setAttribute("aria-label", coordinate);
+        const wasShot = shots[position];
+        const shipId = fleet.grid[position];
+
+        if (isPlayer && shipId !== -1) {
+          cell.classList.add("ship");
+          if (!battleStarted && shipId === selectedShipId) cell.classList.add("selected");
+        }
+        if (isPlayer && shipId !== -1 && fleet.ships[shipId].hits === fleet.ships[shipId].positions.length) {
+          cell.classList.add("sunk");
+        } else if (!isPlayer && sunkEnemyPositions.has(position)) {
+          cell.classList.add("sunk");
+        }
+        if (wasShot) {
+          cell.classList.add(wasShot === "hit" ? "hit" : "miss");
+          cell.textContent = wasShot === "hit" ? "×" : "·";
+          cell.setAttribute("aria-label", `${coordinate}: ${wasShot === "hit" ? "Treffer" : "Daneben"}`);
+        }
+
+        if (isPlayer) {
+          cell.disabled = battleStarted || (battleshipState && battleshipState.ready);
+        } else {
+          cell.disabled = !battleStarted || Boolean(wasShot) || battleshipFinished ||
+            !battleshipState ||
+            battleshipState.currentPlayer !== (localTestMode ? battleshipState.account : currentAccount);
+          cell.addEventListener("click", () => fireAt(position));
+        }
+        element.append(cell);
+      }
+    }
+
+    function savePortalState() {
+      if (currentAccount) {
+        localStorage.setItem(`${activePageStoragePrefix}${currentAccount}`, activePage);
+      }
+    }
+
+    function sendGameAction(action) {
+      if (localTestMode) {
+        applyLocalAction(action);
+        return true;
+      }
+      if (!gameSocket || gameSocket.readyState !== WebSocket.OPEN) {
+        const message = "Keine Verbindung zum Spielserver.";
+        if (activeGame === "battleship") battleshipStatus.textContent = message;
+        else if (activeGame === "yatzy") yatzyStatus.textContent = message;
+        else if (activeGame === "find-match") findMatchStatus.textContent = message;
+        else if (activeGame === "memory") memoryStatus.textContent = message;
+        else gameStatus.textContent = message;
+        return false;
+      }
+      gameSocket.send(JSON.stringify(action));
+      return true;
+    }
+
+    function disconnectGame() {
+      if (gameSocket) {
+        gameSocket.onclose = null;
+        gameSocket.close();
+      }
+      gameSocket = null;
+      activeGame = null;
+    }
+
+    function connectGame(game) {
+      disconnectGame();
+      activeGame = game;
+      if (localTestMode) {
+        if (!localGames[game]) localGames[game] = createLocalGame(game);
+        renderLocalGame();
+        return;
+      }
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      gameSocket = new WebSocket(`${protocol}//${window.location.host}/api/room/${game}?room=${encodeURIComponent(currentRoom)}`);
+      const socket = gameSocket;
+
+      socket.addEventListener("open", () => {
+        if (socket !== gameSocket || game !== activeGame) return;
+        if (game === "battleship") battleshipStatus.textContent = "Verbunden. Lade Spielstand …";
+        else if (game === "yatzy") yatzyStatus.textContent = "Verbunden. Lade Spielstand …";
+        else if (game === "find-match") findMatchStatus.textContent = "Verbunden. Lade Spielstand …";
+        else if (game === "memory") memoryStatus.textContent = "Verbunden. Lade Spielstand …";
+        else gameStatus.textContent = "Verbunden. Lade Spielstand …";
+      });
+      socket.addEventListener("message", (event) => {
+        if (socket !== gameSocket || game !== activeGame) return;
+        let message;
+        try {
+          message = JSON.parse(event.data);
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+          if (game === "battleship") battleshipStatus.textContent = "Ungültige Antwort vom Spielserver.";
+          else if (game === "yatzy") yatzyStatus.textContent = "Ungültige Antwort vom Spielserver.";
+          else if (game === "find-match") findMatchStatus.textContent = "Ungültige Antwort vom Spielserver.";
+          else if (game === "memory") memoryStatus.textContent = "Ungültige Antwort vom Spielserver.";
+          else gameStatus.textContent = "Ungültige Antwort vom Spielserver.";
+          return;
+        }
+
+        if (message.type === "error") {
+          if (game === "battleship") battleshipStatus.textContent = message.message;
+          else if (game === "yatzy") yatzyStatus.textContent = message.message;
+          else if (game === "find-match") findMatchStatus.textContent = message.message;
+          else if (game === "memory") memoryStatus.textContent = message.message;
+          else gameStatus.textContent = message.message;
+          return;
+        }
+        if (message.type !== "state" || message.game !== game) return;
+        if (game === "battleship") renderBattleshipState(message);
+        else if (game === "yatzy") renderYatzyState(message);
+        else if (game === "find-match") renderFindMatchState(message);
+        else if (game === "memory") renderMemoryState(message);
+        else renderTicTacToeState(message);
+      });
+      socket.addEventListener("close", () => {
+        if (socket !== gameSocket || game !== activeGame) return;
+        if (game === "battleship") battleshipStatus.textContent = "Verbindung zum Spielserver getrennt.";
+        else if (game === "yatzy") yatzyStatus.textContent = "Verbindung zum Spielserver getrennt.";
+        else if (game === "find-match") findMatchStatus.textContent = "Verbindung zum Spielserver getrennt.";
+        else if (game === "memory") memoryStatus.textContent = "Verbindung zum Spielserver getrennt.";
+        else gameStatus.textContent = "Verbindung zum Spielserver getrennt.";
+      });
+      socket.addEventListener("error", () => {
+        if (socket !== gameSocket || game !== activeGame) return;
+        if (game === "battleship") battleshipStatus.textContent = "Spielserver nicht erreichbar.";
+        else if (game === "yatzy") yatzyStatus.textContent = "Spielserver nicht erreichbar.";
+        else if (game === "find-match") findMatchStatus.textContent = "Spielserver nicht erreichbar.";
+        else if (game === "memory") memoryStatus.textContent = "Spielserver nicht erreichbar.";
+        else gameStatus.textContent = "Spielserver nicht erreichbar.";
+      });
+    }
+
+    function renderTicTacToeState(state) {
+      board = state.board.map((mark) => mark || "");
+      currentPlayer = state.currentPlayer === "sonni" ? "X" : "O";
+      gameFinished = Boolean(state.winner || state.draw);
+      const winningLine = state.winner
+        ? winningLines.find((line) => line.every((position) => board[position] && board[position] === board[line[0]]))
+        : null;
+
+      cells.forEach((cell, index) => {
+        cell.textContent = board[index];
+        cell.disabled = Boolean(board[index]) || gameFinished ||
+          (!localTestMode && state.currentPlayer !== currentAccount);
+        cell.classList.toggle("winning-cell", Boolean(winningLine && winningLine.includes(index)));
+        if (board[index]) cell.dataset.mark = board[index];
+        else cell.removeAttribute("data-mark");
+        cell.setAttribute("aria-label", `Feld ${index + 1}${board[index] ? `: ${board[index]}` : ""}`);
+      });
+
+      if (state.winner) {
+        gameStatus.textContent = state.winner === currentAccount ? "Du hast gewonnen!" : `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen.`;
+      } else if (state.draw) {
+        gameStatus.textContent = "Unentschieden";
+      } else if (localTestMode) {
+        gameStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran (${state.currentPlayer === "sonni" ? "X" : "O"}).`;
+      } else if (!state.opponentOnline) {
+        gameStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+      } else {
+        gameStatus.textContent = state.currentPlayer === currentAccount ? `Du bist dran (${state.symbol}).` : `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+      }
+    }
+
+    function renderBattleshipState(state) {
+      battleshipState = state;
+      playerFleet = state.fleet;
+      enemyFleet = { grid: Array(boardSize * boardSize).fill(-1), ships: [] };
+      playerShots = state.shotsOnEnemy.map((shot) => shot || "");
+      enemyShots = state.shotsOnMe.map((shot) => shot || "");
+      sunkEnemyPositions = new Set(state.sunkOnEnemy);
+      battleStarted = state.started;
+      battleshipFinished = Boolean(state.winner);
+      const viewAccount = state.account || currentAccount;
+      const opponentName = viewAccount === "sonni" ? "Felix" : "Sonni";
+      if (localTestMode) {
+        playerBoardTitle.textContent = `${viewAccount === "sonni" ? "Sonni" : "Felix"}s Flotte`;
+        enemyBoardTitle.textContent = opponentName;
+      }
+      if (state.started || state.ready) selectedShipId = null;
+      rotateShip.disabled = selectedShipId === null || state.started || state.ready;
+      startBattleshipButton.disabled = state.started || state.ready;
+      startBattleshipButton.textContent = state.ready
+        ? "Warte auf Gegner"
+        : localTestMode ? `Bereit: ${viewAccount === "sonni" ? "Sonni" : "Felix"}` : "Bereit";
+
+      if (state.winner) {
+        battleshipStatus.textContent = state.winner === currentAccount
+          ? "Du hast gewonnen!"
+          : `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen.`;
+      } else if (!state.started) {
+        if (localTestMode) {
+          battleshipStatus.textContent = `Flotte für ${viewAccount === "sonni" ? "Sonni" : "Felix"} aufstellen und Bereit wählen.`;
+        } else if (state.ready) {
+          battleshipStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+        } else if (state.opponentReady) {
+          battleshipStatus.textContent = "Deine Flotte aufstellen und dann Bereit wählen.";
+        } else {
+          battleshipStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}. Stelle in der Zwischenzeit deine Flotte auf.`;
+        }
+      } else if (state.currentPlayer === viewAccount) {
+        battleshipStatus.textContent = localTestMode
+          ? `${viewAccount === "sonni" ? "Sonni" : "Felix"} ist dran.`
+          : "Du bist dran.";
+      } else {
+        battleshipStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+      }
+
+      renderFleetBoard(enemyBoardElement, false);
+      renderFleetBoard(playerBoardElement, true);
+    }
+
+    function scoreYatzyCategory(category, dice) {
+      const counts = Array(7).fill(0);
+      dice.forEach((die) => { counts[die] += 1; });
+      const sum = dice.reduce((total, die) => total + die, 0);
+      const upperIndex = yatzyCategories.findIndex(([key]) => key === category);
+      if (upperIndex >= 0 && upperIndex < 6) return counts[upperIndex + 1] * (upperIndex + 1);
+      if (category === "threeKind") return counts.some((count) => count >= 3) ? sum : 0;
+      if (category === "fourKind") return counts.some((count) => count >= 4) ? sum : 0;
+      if (category === "fullHouse") return counts.includes(3) && counts.includes(2) ? 25 : 0;
+      if (category === "smallStraight") return [1, 2, 3, 4, 5].every((face) => counts[face] > 0) ? 30 : 0;
+      if (category === "largeStraight") return [2, 3, 4, 5, 6].every((face) => counts[face] > 0) ? 40 : 0;
+      if (category === "chance") return sum;
+      if (category === "yatzy") return counts.includes(5) ? 50 : 0;
+      return 0;
+    }
+
+    function getYatzyTotal(scores) {
+      const upperTotal = yatzyCategories.slice(0, 6)
+        .reduce((total, [category]) => total + (scores[category] || 0), 0);
+      const lowerTotal = yatzyCategories.slice(6)
+        .reduce((total, [category]) => total + (scores[category] || 0), 0);
+      return upperTotal + (upperTotal >= 63 ? 35 : 0) + lowerTotal;
+    }
+
+    function renderYatzyState(state) {
+      yatzyState = state;
+      if (yatzyHeldPlayer !== state.currentPlayer) {
+        yatzyHeld = Array(5).fill(false);
+        yatzyHeldPlayer = state.currentPlayer;
+      }
+      const playingAccount = localTestMode ? state.currentPlayer : currentAccount;
+      const isTurn = state.currentPlayer === playingAccount && !state.winner && !state.draw;
+      yatzyDiceElement.replaceChildren();
+      state.dice.forEach((die, index) => {
+        const button = document.createElement("button");
+        button.className = `yatzy-die${yatzyHeld[index] ? " held" : ""}`;
+        button.type = "button";
+        button.textContent = String(die);
+        button.setAttribute("aria-label", `Würfel ${index + 1}: ${die}${yatzyHeld[index] ? ", gehalten" : ""}`);
+        button.setAttribute("aria-pressed", String(yatzyHeld[index]));
+        button.disabled = !isTurn || state.rollCount === 0 || state.rollCount >= 3;
+        button.addEventListener("click", () => {
+          yatzyHeld[index] = !yatzyHeld[index];
+          renderYatzyState(yatzyState);
+        });
+        yatzyDiceElement.append(button);
+      });
+      rollYatzyButton.disabled = !isTurn || state.rollCount >= 3;
+      rollYatzyButton.textContent = `Würfeln (${state.rollCount}/3)`;
+
+      const playingName = playingAccount === "sonni" ? "Sonni" : "Felix";
+      if (state.winner) {
+        yatzyStatus.textContent = `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen!`;
+      } else if (state.draw) {
+        yatzyStatus.textContent = "Unentschieden";
+      } else if (isTurn) {
+        yatzyStatus.textContent = `${playingName} ist dran. Würfe: ${state.rollCount}/3.`;
+      } else {
+        yatzyStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+      }
+
+      yatzyScorecard.replaceChildren();
+      for (const [category, label] of yatzyCategories) {
+        const row = document.createElement("tr");
+        const title = document.createElement("th");
+        title.scope = "row";
+        title.textContent = label;
+        row.append(title);
+        for (const player of ["sonni", "felix"]) {
+          const cell = document.createElement("td");
+          const value = state.scores[player][category];
+          if (value !== null) {
+            cell.textContent = String(value);
+          } else if (player === playingAccount && isTurn && state.rollCount > 0) {
+            const button = document.createElement("button");
+            button.className = "yatzy-score-button";
+            button.type = "button";
+            button.textContent = String(scoreYatzyCategory(category, state.dice));
+            button.setAttribute("aria-label", `${label}: ${button.textContent} Punkte eintragen`);
+            button.addEventListener("click", () => sendGameAction({ type: "score", category }));
+            cell.append(button);
+          } else {
+            cell.textContent = "–";
+          }
+          row.append(cell);
+        }
+        yatzyScorecard.append(row);
+      }
+
+      const upperScore = (player) => yatzyCategories.slice(0, 6)
+        .reduce((total, [category]) => total + (state.scores[player][category] || 0), 0);
+      const bonusRow = document.createElement("tr");
+      const bonusTitle = document.createElement("th");
+      bonusTitle.scope = "row";
+      bonusTitle.textContent = "Oberer Block / Bonus";
+      bonusRow.append(bonusTitle);
+      for (const player of ["sonni", "felix"]) {
+        const cell = document.createElement("td");
+        const upper = upperScore(player);
+        cell.textContent = `${upper} / ${upper >= 63 ? 35 : 0}`;
+        bonusRow.append(cell);
+      }
+      yatzyScorecard.append(bonusRow);
+
+      const totalRow = document.createElement("tr");
+      totalRow.className = "yatzy-total";
+      const totalTitle = document.createElement("th");
+      totalTitle.scope = "row";
+      totalTitle.textContent = "Gesamt";
+      totalRow.append(totalTitle);
+      for (const player of ["sonni", "felix"]) {
+        const cell = document.createElement("td");
+        cell.textContent = String(state.totals?.[player] ?? getYatzyTotal(state.scores[player]));
+        totalRow.append(cell);
+      }
+      yatzyScorecard.append(totalRow);
+    }
+
+    function createFindMatchGame() {
+      const matchKey = {
+        shape: findMatchShapes[Math.floor(Math.random() * findMatchShapes.length)],
+        color: Object.keys(findMatchColors)[Math.floor(Math.random() * Object.keys(findMatchColors).length)],
+      };
+      const available = [];
+      for (const shape of findMatchShapes) {
+        for (const color of Object.keys(findMatchColors)) {
+          if (shape !== matchKey.shape || color !== matchKey.color) available.push({ shape, color });
+        }
+      }
+      available.sort(() => Math.random() - 0.5);
+      const makeCard = (pairs, matchingSize) => pairs.map(({ shape, color }, index) => ({
+        shape,
+        color,
+        size: index === 0 ? matchingSize : 24 + Math.floor(Math.random() * 33),
+      })).sort(() => Math.random() - 0.5);
+      const matchingItem = (size) => ({ ...matchKey, size });
+      const firstMatchSize = 24 + Math.floor(Math.random() * 33);
+      let secondMatchSize = 24 + Math.floor(Math.random() * 33);
+      if (secondMatchSize === firstMatchSize) {
+        secondMatchSize = secondMatchSize === 56 ? 24 : secondMatchSize + 1;
+      }
+      return {
+        cards: [
+          makeCard([matchingItem(firstMatchSize), ...available.slice(0, 8)], firstMatchSize),
+          makeCard([matchingItem(secondMatchSize), ...available.slice(8, 16)], secondMatchSize),
+        ],
+        matchKey,
+        round: 1,
+        scores: { sonni: 0, felix: 0 },
+        winner: null,
+        lastScorer: null,
+      };
+    }
+
+    function makeFindMatchSvg(item) {
+      const namespace = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(namespace, "svg");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("width", String(item.size));
+      svg.setAttribute("height", String(item.size));
+      svg.setAttribute("aria-hidden", "true");
+      let shape;
+      if (item.shape === "circle") {
+        shape = document.createElementNS(namespace, "circle");
+        shape.setAttribute("cx", "50");
+        shape.setAttribute("cy", "50");
+        shape.setAttribute("r", "44");
+      } else {
+        shape = document.createElementNS(namespace, item.shape === "square" ? "rect" : "polygon");
+        if (item.shape === "square") {
+          shape.setAttribute("x", "7");
+          shape.setAttribute("y", "7");
+          shape.setAttribute("width", "86");
+          shape.setAttribute("height", "86");
+          shape.setAttribute("rx", "8");
+        } else if (item.shape === "triangle") {
+          shape.setAttribute("points", "50,5 96,92 4,92");
+        } else if (item.shape === "diamond") {
+          shape.setAttribute("points", "50,3 97,50 50,97 3,50");
+        } else {
+          shape.setAttribute("points", "50,3 61,35 96,35 68,56 79,92 50,70 21,92 32,56 4,35 39,35");
+        }
+      }
+      shape.setAttribute("fill", item.color);
+      svg.append(shape);
+      return svg;
+    }
+
+    function renderFindMatchState(state) {
+      findMatchState = state;
+      findMatchSonniScore.textContent = String(state.scores.sonni);
+      findMatchFelixScore.textContent = String(state.scores.felix);
+      for (const [cardIndex, card] of state.cards.entries()) {
+        findMatchCards[cardIndex].replaceChildren();
+        card.forEach((item, itemIndex) => {
+          const button = document.createElement("button");
+          button.className = "find-match-item";
+          button.type = "button";
+          const sideAccount = cardIndex === 0 ? "felix" : "sonni";
+          button.disabled = Boolean(state.winner) || (!localTestMode && state.account !== sideAccount);
+          const shapeName = item.shape === "circle" ? "Kreis"
+            : item.shape === "square" ? "Quadrat"
+              : item.shape === "triangle" ? "Dreieck"
+                : item.shape === "diamond" ? "Raute" : "Stern";
+          button.setAttribute("aria-label", `${shapeName}, ${findMatchColors[item.color]}, Größe ${item.size}`);
+          button.append(makeFindMatchSvg(item));
+          button.addEventListener("click", () => {
+            sendGameAction({ type: "claim", card: cardIndex, index: itemIndex, round: state.round });
+          });
+          findMatchCards[cardIndex].append(button);
+        });
+      }
+
+      if (state.winner) {
+        findMatchStatus.textContent = `${state.winner === "sonni" ? "Sonni" : "Felix"} hat mit 10 Punkten gewonnen!`;
+      } else if (localTestMode) {
+        findMatchStatus.textContent = `Links Felix, rechts Sonni. Wer zuerst das passende Item klickt, erhält einen Punkt. Runde ${state.round}.`;
+      } else if (state.lastScorer) {
+        findMatchStatus.textContent = `${state.lastScorer === "sonni" ? "Sonni" : "Felix"} erhält einen Punkt. Runde ${state.round}.`;
+      } else {
+        findMatchStatus.textContent = `Runde ${state.round}: Klicke zuerst auf die passende Form mit gleicher Farbe.`;
+      }
+    }
+
+    function renderMemoryState(state) {
+      memorySonniScore.textContent = String(state.scores.sonni);
+      memoryFelixScore.textContent = String(state.scores.felix);
+      memoryBoard.replaceChildren();
+      state.cards.forEach((card, index) => {
+        const isRevealed = state.revealed.includes(index);
+        const button = document.createElement("button");
+        button.className = `memory-card${card.matched ? " matched" : ""}`;
+        button.type = "button";
+        button.textContent = card.matched || isRevealed ? card.animal : "❔";
+        button.setAttribute("aria-label", card.matched || isRevealed ? `Tierkarte ${card.animal}` : "Verdeckte Tierkarte");
+        button.disabled = Boolean(state.winner) || Boolean(state.mismatchPending) ||
+          state.currentPlayer !== (localTestMode ? state.account : currentAccount) ||
+          card.matched || isRevealed;
+        button.addEventListener("click", () => sendGameAction({ type: "flip", index }));
+        memoryBoard.append(button);
+      });
+
+      if (state.winner) {
+        const winnerName = state.winner === "sonni" ? "Sonni" : "Felix";
+        memoryStatus.textContent = localTestMode || state.winner !== currentAccount
+          ? `${winnerName} hat Memory gewonnen!`
+          : "Du hast Memory gewonnen!";
+      } else if (state.draw) {
+        memoryStatus.textContent = "Memory endet unentschieden!";
+      } else if (state.mismatchPending) {
+        memoryStatus.textContent = "Kein Paar. Die Karten werden umgedreht …";
+      } else if (localTestMode) {
+        memoryStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran. Bei einem Paar gibt es einen Punkt und einen weiteren Zug.`;
+      } else if (state.currentPlayer === currentAccount) {
+        memoryStatus.textContent = "Du bist dran. Finde ein Tierpaar!";
+      } else if (!state.opponentOnline) {
+        memoryStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+      } else {
+        memoryStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+      }
+    }
+
+    function createLocalFleet() {
+      const grid = Array(boardSize * boardSize).fill(-1);
+      const ships = fleetSizes.map((length, shipId) => {
+        const row = shipId * 2;
+        const column = Math.floor(Math.random() * (boardSize - length + 1));
+        const positions = getShipPositions(row * boardSize + column, length, true);
+        positions.forEach((position) => { grid[position] = shipId; });
+        return { positions, horizontal: true, hits: 0 };
+      });
+      return { grid, ships };
+    }
+
+    function createLocalGame(game) {
+      if (game === "tic-tac-toe") {
+        return {
+          board: Array(9).fill(null),
+          currentPlayer: "sonni",
+          startingPlayer: "sonni",
+          nextStarter: "sonni",
+          winner: null,
+          draw: false,
+        };
+      }
+      if (game === "yatzy") return createLocalYatzy();
+      if (game === "find-match") return createFindMatchGame();
+      if (game === "memory") return createLocalMemory();
+      return createLocalBattleship();
+    }
+
+    function createLocalMemory() {
+      return {
+        cards: [...memoryAnimals, ...memoryAnimals]
+          .map((animal) => ({ animal, matched: false }))
+          .sort(() => Math.random() - 0.5),
+        revealed: [],
+        currentPlayer: "sonni",
+        scores: { sonni: 0, felix: 0 },
+        winner: null,
+        draw: false,
+        mismatchPending: false,
+      };
+    }
+
+    function createLocalYatzy() {
+      const emptyScores = () => Object.fromEntries(yatzyCategories.map(([category]) => [category, null]));
+      return {
+        dice: [1, 1, 1, 1, 1],
+        rollCount: 0,
+        currentPlayer: "sonni",
+        scores: { sonni: emptyScores(), felix: emptyScores() },
+        winner: null,
+        draw: false,
+      };
+    }
+
+    function createLocalBattleship() {
+      return {
+        players: {
+          sonni: { fleet: createLocalFleet(), shots: Array(boardSize * boardSize).fill(null), ready: false },
+          felix: { fleet: createLocalFleet(), shots: Array(boardSize * boardSize).fill(null), ready: false },
+        },
+        setupPlayer: "sonni",
+        started: false,
+        currentPlayer: "sonni",
+        winner: null,
+      };
+    }
+
+    function renderLocalGame() {
+      const game = localGames[activeGame];
+      if (activeGame === "tic-tac-toe") {
+        renderTicTacToeState({
+          ...game,
+          account: "sonni",
+          symbol: "X",
+          localTest: true,
+        });
+        return;
+      }
+      if (activeGame === "yatzy") {
+        renderYatzyState({
+          ...game,
+          totals: {
+            sonni: getYatzyTotal(game.scores.sonni),
+            felix: getYatzyTotal(game.scores.felix),
+          },
+        });
+        return;
+      }
+      if (activeGame === "find-match") {
+        renderFindMatchState(game);
+        return;
+      }
+      if (activeGame === "memory") {
+        renderMemoryState({ ...game, account: game.currentPlayer });
+        return;
+      }
+
+      const viewAccount = game.started ? game.currentPlayer : game.setupPlayer;
+      const opponent = viewAccount === "sonni" ? "felix" : "sonni";
+      const player = game.players[viewAccount];
+      const opposingPlayer = game.players[opponent];
+      renderBattleshipState({
+        type: "state",
+        game: "battleship",
+        account: viewAccount,
+        fleet: player.fleet,
+        shotsOnEnemy: player.shots,
+        shotsOnMe: opposingPlayer.shots,
+        sunkOnEnemy: opposingPlayer.fleet.ships
+          .filter((ship) => ship.hits === ship.positions.length)
+          .flatMap((ship) => ship.positions),
+        ready: player.ready,
+        opponentReady: opposingPlayer.ready,
+        started: game.started,
+        currentPlayer: game.currentPlayer,
+        winner: game.winner,
+        localTest: true,
+      });
+    }
+
+    function applyLocalAction(action) {
+      const game = localGames[activeGame];
+      if (!game) return;
+      if (action.type === "restart") {
+        if (activeGame === "tic-tac-toe") {
+          const startingPlayer = game.nextStarter;
+          localGames[activeGame] = {
+            board: Array(9).fill(null),
+            currentPlayer: startingPlayer,
+            startingPlayer,
+            nextStarter: startingPlayer,
+            winner: null,
+            draw: false,
+          };
+        } else if (activeGame === "yatzy") {
+          localGames[activeGame] = activeGame === "yatzy" ? createLocalYatzy() : createLocalBattleship();
+        } else if (activeGame === "find-match") {
+          localGames[activeGame] = createFindMatchGame();
+        } else if (activeGame === "memory") {
+          localGames[activeGame] = createLocalMemory();
+        } else {
+          localGames[activeGame] = createLocalBattleship();
+        }
+        renderLocalGame();
+        return;
+      }
+
+      if (activeGame === "tic-tac-toe") {
+        if (action.type !== "move" || game.winner || game.draw ||
+            !Number.isInteger(action.position) || action.position < 0 ||
+            action.position >= game.board.length || game.board[action.position] !== null) return;
+        const player = game.currentPlayer;
+        game.board[action.position] = player === "sonni" ? "X" : "O";
+        const line = winningLines.find((positions) =>
+          positions.every((position) => game.board[position] === game.board[action.position]));
+        if (line) {
+          game.winner = player;
+          localWins[player] += 1;
+          game.nextStarter = game.startingPlayer === "sonni" ? "felix" : "sonni";
+          renderLocalScoreboard();
+        } else if (game.board.every(Boolean)) {
+          game.draw = true;
+          game.nextStarter = game.startingPlayer === "sonni" ? "felix" : "sonni";
+        } else {
+          game.currentPlayer = player === "sonni" ? "felix" : "sonni";
+        }
+        renderLocalGame();
+        return;
+      }
+
+      if (activeGame === "yatzy") {
+        if (game.winner || game.draw) return;
+        if (action.type === "roll" &&
+            (game.currentPlayer === "sonni" || game.currentPlayer === "felix") &&
+            game.rollCount < 3 && Array.isArray(action.held) && action.held.length === 5) {
+          game.dice = game.dice.map((die, index) =>
+            action.held[index] && game.rollCount > 0 ? die : Math.floor(Math.random() * 6) + 1);
+          game.rollCount += 1;
+        } else if (action.type === "score" && game.rollCount > 0 &&
+            yatzyCategories.some(([category]) => category === action.category) &&
+            game.scores[game.currentPlayer][action.category] === null) {
+          game.scores[game.currentPlayer][action.category] = scoreYatzyCategory(action.category, game.dice);
+          const complete = yatzyCategories.every(([category]) =>
+            game.scores.sonni[category] !== null && game.scores.felix[category] !== null);
+          if (complete) {
+            const sonniTotal = getYatzyTotal(game.scores.sonni);
+            const felixTotal = getYatzyTotal(game.scores.felix);
+            game.winner = sonniTotal === felixTotal ? null : sonniTotal > felixTotal ? "sonni" : "felix";
+            game.draw = sonniTotal === felixTotal;
+            if (game.winner) localWins[game.winner] += 1;
+            renderLocalScoreboard();
+          } else {
+            game.currentPlayer = game.currentPlayer === "sonni" ? "felix" : "sonni";
+            game.rollCount = 0;
+            game.dice = [1, 1, 1, 1, 1];
+          }
+        }
+        renderLocalGame();
+        return;
+      }
+
+      if (activeGame === "find-match") {
+        if (game.winner || action.type !== "claim" || action.round !== game.round ||
+            !Number.isInteger(action.card) || !Number.isInteger(action.index) ||
+            action.card < 0 || action.card > 1 || action.index < 0 ||
+            action.index >= game.cards[action.card].length) return;
+        const item = game.cards[action.card][action.index];
+        if (item.shape !== game.matchKey.shape || item.color !== game.matchKey.color) {
+          findMatchStatus.textContent = "Das ist nicht das passende Item.";
+          return;
+        }
+        const player = action.card === 0 ? "felix" : "sonni";
+        game.scores[player] += 1;
+        game.lastScorer = player;
+        if (game.scores[player] >= 10) {
+          game.winner = player;
+          localWins[player] += 1;
+          renderLocalScoreboard();
+        } else {
+          const nextRound = createFindMatchGame();
+          nextRound.round = game.round + 1;
+          nextRound.scores = game.scores;
+          nextRound.lastScorer = player;
+          localGames[activeGame] = nextRound;
+        }
+        renderLocalGame();
+        return;
+      }
+
+      if (activeGame === "memory") {
+        if (game.winner || game.mismatchPending || action.type !== "flip" ||
+            !Number.isInteger(action.index) || action.index < 0 || action.index >= game.cards.length ||
+            game.cards[action.index].matched || game.revealed.includes(action.index)) return;
+        game.revealed.push(action.index);
+        if (game.revealed.length === 2) {
+          const [firstIndex, secondIndex] = game.revealed;
+          if (game.cards[firstIndex].animal === game.cards[secondIndex].animal) {
+            game.cards[firstIndex].matched = true;
+            game.cards[secondIndex].matched = true;
+            game.revealed = [];
+            game.scores[game.currentPlayer] += 1;
+            if (game.cards.every((card) => card.matched)) {
+              game.winner = game.scores.sonni === game.scores.felix
+                ? null
+                : game.scores.sonni > game.scores.felix ? "sonni" : "felix";
+              game.draw = !game.winner;
+              if (game.winner) {
+                localWins[game.winner] += 1;
+                renderLocalScoreboard();
+              }
+            }
+          } else {
+            game.mismatchPending = true;
+            window.setTimeout(() => {
+              if (localGames.memory !== game || !game.mismatchPending) return;
+              game.revealed = [];
+              game.mismatchPending = false;
+              game.currentPlayer = game.currentPlayer === "sonni" ? "felix" : "sonni";
+              if (activeGame === "memory") renderLocalGame();
+            }, 1000);
+          }
+        }
+        renderLocalGame();
+        return;
+      }
+
+      const accountName = game.started ? game.currentPlayer : game.setupPlayer;
+      const player = game.players[accountName];
+      const opponent = game.players[accountName === "sonni" ? "felix" : "sonni"];
+      if (action.type === "place" && !game.started && Array.isArray(action.ships)) {
+        player.fleet.ships = action.ships.map((ship, shipId) => ({
+          positions: [...ship.positions],
+          horizontal: ship.horizontal,
+          hits: player.fleet.ships[shipId].hits,
+        }));
+        player.fleet.grid.fill(-1);
+        player.fleet.ships.forEach((ship, shipId) => {
+          ship.positions.forEach((position) => { player.fleet.grid[position] = shipId; });
+        });
+      } else if (action.type === "ready" && !game.started) {
+        player.ready = true;
+        if (game.players.sonni.ready && game.players.felix.ready) game.started = true;
+        else game.setupPlayer = accountName === "sonni" ? "felix" : "sonni";
+      } else if (action.type === "shoot" && game.started && !game.winner &&
+          Number.isInteger(action.position) && action.position >= 0 &&
+          action.position < boardSize * boardSize && player.shots[action.position] === null) {
+        const shipId = opponent.fleet.grid[action.position];
+        player.shots[action.position] = shipId === -1 ? "miss" : "hit";
+        if (shipId !== -1) opponent.fleet.ships[shipId].hits += 1;
+        if (opponent.fleet.ships.every((ship) => ship.hits === ship.positions.length)) {
+          game.winner = accountName;
+          localWins[accountName] += 1;
+          renderLocalScoreboard();
+        } else {
+          game.currentPlayer = accountName === "sonni" ? "felix" : "sonni";
+        }
+      }
+      renderLocalGame();
+    }
+
+    function renderLocalScoreboard() {
+      sonniWins.textContent = String(localWins.sonni);
+      felixWins.textContent = String(localWins.felix);
+    }
+
+    function connectSession(accountName, roomCode) {
+      currentAccount = accountName;
+      currentRoom = roomCode;
+      document.querySelector("#active-room-code").textContent = roomCode;
+      logout.hidden = localTestMode;
+      openTicTacToe.disabled = !supportedPlayers.has(accountName);
+      openBattleship.disabled = !supportedPlayers.has(accountName);
+      openYatzy.disabled = !supportedPlayers.has(accountName);
+      openFindMatch.disabled = !supportedPlayers.has(accountName);
+      openMemory.disabled = !supportedPlayers.has(accountName);
+      showPage("home", false);
+      document.title = "Spiele";
+
+      const savedPage = localStorage.getItem(`${activePageStoragePrefix}${currentAccount}`);
+      if (savedPage === "game") {
+        showPage("game", false);
+        document.title = "Tic-Tac-Toe";
+        connectGame("tic-tac-toe");
+      } else if (savedPage === "battleship") {
+        showPage("battleship", false);
+        document.title = "Schiffe versenken";
+        connectGame("battleship");
+      } else if (savedPage === "yatzy") {
+        showPage("yatzy", false);
+        document.title = "Yatzy";
+        connectGame("yatzy");
+      } else if (savedPage === "find-match") {
+        showPage("find-match", false);
+        document.title = "Find Match";
+        connectGame("find-match");
+      } else if (savedPage === "memory") {
+        showPage("memory", false);
+        document.title = "Memory mit Tieren";
+        connectGame("memory");
+      }
+    }
+
+    async function loadScoreboard() {
+      if (localTestMode) {
+        renderLocalScoreboard();
+        return;
+      }
+      portalStatus.hidden = true;
+      try {
+        const response = await fetch("/api/scoreboard");
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Scoreboard konnte nicht geladen werden.");
+        sonniWins.textContent = String(result.wins.sonni);
+        felixWins.textContent = String(result.wins.felix);
+      } catch (error) {
+        portalStatus.textContent = error.message || "Scoreboard konnte nicht geladen werden.";
+        portalStatus.hidden = false;
+      }
+    }
+
+    function getShipPositions(anchor, length, horizontal) {
+      const row = Math.floor(anchor / boardSize);
+      const column = anchor % boardSize;
+      if (horizontal && column + length > boardSize) return null;
+      if (!horizontal && row + length > boardSize) return null;
+      return Array.from({ length }, (_, offset) =>
+        (row + (horizontal ? 0 : offset)) * boardSize +
+        column + (horizontal ? offset : 0));
+    }
+
+    function canPlaceShip(shipId, positions) {
+      if (!positions || positions.some((position) => playerFleet.grid[position] !== -1 && playerFleet.grid[position] !== shipId)) {
+        return false;
+      }
+
+      const proposedPositions = new Set(positions);
+      return positions.every((position) => {
+        const row = Math.floor(position / boardSize);
+        const column = position % boardSize;
+        for (let neighborRow = Math.max(0, row - 1); neighborRow <= Math.min(boardSize - 1, row + 1); neighborRow += 1) {
+          for (let neighborColumn = Math.max(0, column - 1); neighborColumn <= Math.min(boardSize - 1, column + 1); neighborColumn += 1) {
+            const neighbor = neighborRow * boardSize + neighborColumn;
+            if (
+              playerFleet.grid[neighbor] !== -1 &&
+              playerFleet.grid[neighbor] !== shipId &&
+              !proposedPositions.has(neighbor)
+            ) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+    }
+
+    function selectOrMoveShip(position) {
+      if (!playerFleet || (battleshipState && battleshipState.ready)) return;
+      const shipId = playerFleet.grid[position];
+      if (shipId !== -1) {
+        selectedShipId = shipId;
+        selectedHorizontal = playerFleet.ships[shipId].horizontal;
+        rotateShip.disabled = false;
+        battleshipStatus.textContent = `Schiff mit ${playerFleet.ships[shipId].positions.length} Feldern ausgewählt. Zielfeld wählen.`;
+        renderFleetBoard(playerBoardElement, true);
+        savePortalState();
+        return;
+      }
+
+      if (selectedShipId === null) return;
+      const ship = playerFleet.ships[selectedShipId];
+      const newPositions = getShipPositions(position, ship.positions.length, selectedHorizontal);
+      if (!canPlaceShip(selectedShipId, newPositions)) {
+        battleshipStatus.textContent = "Dort passt das Schiff nicht hin.";
+        return;
+      }
+
+      ship.positions.forEach((oldPosition) => { playerFleet.grid[oldPosition] = -1; });
+      newPositions.forEach((newPosition) => { playerFleet.grid[newPosition] = selectedShipId; });
+      ship.positions = newPositions;
+      ship.horizontal = selectedHorizontal;
+      selectedShipId = null;
+      rotateShip.disabled = true;
+      battleshipStatus.textContent = "Schiff verschoben. Wähle ein Schiff oder starte den Kampf.";
+      renderFleetBoard(playerBoardElement, true);
+      sendFleetPlacement();
+    }
+
+    function sendFleetPlacement() {
+      if (!playerFleet) return;
+      sendGameAction({
+        type: "place",
+        ships: playerFleet.ships.map(({ positions, horizontal }) => ({ positions, horizontal })),
+      });
+    }
+
+    function moveShip(shipId, anchor, horizontal) {
+      const ship = playerFleet.ships[shipId];
+      const newPositions = getShipPositions(anchor, ship.positions.length, horizontal);
+      if (!canPlaceShip(shipId, newPositions)) return false;
+
+      ship.positions.forEach((oldPosition) => { playerFleet.grid[oldPosition] = -1; });
+      newPositions.forEach((newPosition) => { playerFleet.grid[newPosition] = shipId; });
+      ship.positions = newPositions;
+      ship.horizontal = horizontal;
+      sendFleetPlacement();
+      return true;
+    }
+
+    function clearDragPreview() {
+      playerBoardElement.querySelectorAll(".preview-valid, .preview-invalid, .dragging").forEach((cell) => {
+        cell.classList.remove("preview-valid", "preview-invalid", "dragging");
+      });
+    }
+
+    function previewShipMove(anchor) {
+      clearDragPreview();
+      const ship = playerFleet.ships[shipDrag.shipId];
+      const anchorPosition = anchor - (shipDrag.horizontal ? shipDrag.grabOffset : shipDrag.grabOffset * boardSize);
+      const positions = getShipPositions(anchorPosition, ship.positions.length, shipDrag.horizontal);
+      const valid = canPlaceShip(shipDrag.shipId, positions);
+
+      ship.positions.forEach((position) => {
+        playerBoardElement.children[position].classList.add("dragging");
+      });
+
+      const previewPositions = positions || [anchor];
+      previewPositions.forEach((position) => {
+        playerBoardElement.children[position].classList.add(valid ? "preview-valid" : "preview-invalid");
+      });
+      shipDrag.anchor = anchorPosition;
+      shipDrag.valid = valid;
+      shipDrag.moved = anchor !== shipDrag.startPosition;
+    }
+
+    playerBoardElement.addEventListener("pointerdown", (event) => {
+      if (battleStarted || (battleshipState && battleshipState.ready) || event.button !== 0) return;
+      const cell = event.target.closest(".sea-cell");
+      if (!cell) return;
+      const position = Array.prototype.indexOf.call(playerBoardElement.children, cell);
+      const shipId = playerFleet.grid[position];
+      if (shipId === -1) return;
+
+      const ship = playerFleet.ships[shipId];
+      selectedShipId = shipId;
+      selectedHorizontal = ship.horizontal;
+      rotateShip.disabled = false;
+      battleshipStatus.textContent = `Schiff mit ${ship.positions.length} Feldern ausgewählt. Ziehe es an die gewünschte Position.`;
+      const grabOffset = ship.positions.indexOf(position);
+      shipDrag = {
+        pointerId: event.pointerId,
+        shipId,
+        horizontal: ship.horizontal,
+        grabOffset,
+        startPosition: position,
+        moved: false,
+        valid: false,
+        anchor: ship.positions[0],
+      };
+      playerBoardElement.setPointerCapture(event.pointerId);
+      clearDragPreview();
+      ship.positions.forEach((shipPosition) => {
+        playerBoardElement.children[shipPosition].classList.add("selected", "dragging");
+      });
+      savePortalState();
+    });
+
+    playerBoardElement.addEventListener("pointermove", (event) => {
+      if (!shipDrag || shipDrag.pointerId !== event.pointerId) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const cell = target && target.closest(".sea-cell");
+      if (!cell || !playerBoardElement.contains(cell)) {
+        clearDragPreview();
+        shipDrag.valid = false;
+        shipDrag.moved = true;
+        return;
+      }
+
+      const targetPosition = Array.prototype.indexOf.call(playerBoardElement.children, cell);
+      previewShipMove(targetPosition);
+    });
+
+    playerBoardElement.addEventListener("pointerup", (event) => {
+      if (!shipDrag || shipDrag.pointerId !== event.pointerId) return;
+      const drag = shipDrag;
+      shipDrag = null;
+      clearDragPreview();
+
+      if (drag.moved && drag.valid) {
+        moveShip(drag.shipId, drag.anchor, drag.horizontal);
+        selectedShipId = null;
+        rotateShip.disabled = true;
+        battleshipStatus.textContent = "Schiff verschoben. Wähle ein Schiff oder starte den Kampf.";
+      }
+
+      renderFleetBoard(playerBoardElement, true);
+      savePortalState();
+      if (playerBoardElement.hasPointerCapture(event.pointerId)) {
+        playerBoardElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    playerBoardElement.addEventListener("pointercancel", () => {
+      if (!shipDrag) return;
+      shipDrag = null;
+      clearDragPreview();
+      renderFleetBoard(playerBoardElement, true);
+    });
+
+    playerBoardElement.addEventListener("click", (event) => {
+      if (event.detail !== 0 || battleStarted || (battleshipState && battleshipState.ready)) return;
+      const cell = event.target.closest(".sea-cell");
+      if (!cell) return;
+      const position = Array.prototype.indexOf.call(playerBoardElement.children, cell);
+      selectOrMoveShip(position);
+    });
+
+    function toggleShipOrientation() {
+      if (selectedShipId === null || battleStarted || (battleshipState && battleshipState.ready)) return;
+      const ship = playerFleet.ships[selectedShipId];
+      const horizontal = !ship.horizontal;
+      const anchor = ship.positions[0];
+      if (!moveShip(selectedShipId, anchor, horizontal)) {
+        battleshipStatus.textContent = "Das Schiff kann an dieser Position nicht gedreht werden.";
+        return;
+      }
+
+      selectedHorizontal = horizontal;
+      battleshipStatus.textContent = `Schiff direkt ${horizontal ? "waagerecht" : "senkrecht"} gedreht.`;
+      renderFleetBoard(playerBoardElement, true);
+      savePortalState();
+    }
+
+    function beginBattleship() {
+      if (!battleshipState || battleStarted || battleshipState.ready) return;
+      selectedShipId = null;
+      sendGameAction({ type: "ready" });
+    }
+
+    function fireAt(position) {
+      if (
+        !battleStarted ||
+        battleshipFinished ||
+        !battleshipState ||
+        battleshipState.currentPlayer !== (localTestMode ? battleshipState.account : currentAccount) ||
+        playerShots[position]
+      ) {
+        return;
+      }
+      sendGameAction({ type: "shoot", position });
+    }
+
+    function resetGame() {
+      if (!window.confirm("Möchtest du das Spiel wirklich neu starten? Der aktuelle Spielstand geht verloren.")) return;
+      sendGameAction({ type: "restart" });
+    }
+
+    function showPage(page, persist = true) {
+      loginPage.hidden = page !== "login";
+      homePage.hidden = page !== "home";
+      gamePage.hidden = page !== "game";
+      battleshipPage.hidden = page !== "battleship";
+      yatzyPage.hidden = page !== "yatzy";
+      findMatchPage.hidden = page !== "find-match";
+      memoryPage.hidden = page !== "memory";
+      activePage = page;
+      if (persist) savePortalState();
+      if (page === "home" && currentAccount) loadScoreboard();
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      status.hidden = true;
+      const action = event.submitter && event.submitter.value;
+      const roomCode = roomCodeInput.value.trim().toUpperCase();
+      if (action === "join" && !/^[A-HJ-NP-Z2-9]{8}$/u.test(roomCode)) {
+        status.textContent = "Bitte gib einen gültigen Raumcode mit 8 Zeichen ein.";
+        status.hidden = false;
+        return;
+      }
+
+      try {
+        const endpoint = action === "create" ? "/api/rooms/create" : "/api/rooms/join";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action === "create" ? {} : { room: roomCode }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Raum konnte nicht geöffnet werden.");
+        roomCodeInput.value = "";
+        connectSession(result.account, result.room);
+      } catch (error) {
+        status.textContent = error.message || "Raum konnte nicht geöffnet werden.";
+        status.hidden = false;
+      }
+    });
+
+    openTicTacToe.addEventListener("click", () => {
+      disconnectGame();
+      showPage("game");
+      document.title = "Tic-Tac-Toe";
+      connectGame("tic-tac-toe");
+    });
+
+    cells.forEach((cell, index) => {
+      cell.addEventListener("click", () => {
+        sendGameAction({ type: "move", position: index });
+      });
+    });
+
+    restartGame.addEventListener("click", resetGame);
+
+    backToGames.addEventListener("click", () => {
+      disconnectGame();
+      showPage("home");
+      document.title = "Spiele";
+    });
+
+    openBattleship.addEventListener("click", () => {
+      disconnectGame();
+      showPage("battleship");
+      document.title = "Schiffe versenken";
+      connectGame("battleship");
+    });
+
+    openYatzy.addEventListener("click", () => {
+      disconnectGame();
+      showPage("yatzy");
+      document.title = "Yatzy";
+      connectGame("yatzy");
+    });
+
+    openFindMatch.addEventListener("click", () => {
+      disconnectGame();
+      showPage("find-match");
+      document.title = "Find Match";
+      connectGame("find-match");
+    });
+
+    openMemory.addEventListener("click", () => {
+      disconnectGame();
+      showPage("memory");
+      document.title = "Memory mit Tieren";
+      connectGame("memory");
+    });
+
+    backFromYatzy.addEventListener("click", () => {
+      disconnectGame();
+      showPage("home");
+      document.title = "Spiele";
+    });
+
+    backFromFindMatch.addEventListener("click", () => {
+      disconnectGame();
+      showPage("home");
+      document.title = "Spiele";
+    });
+
+    backFromMemory.addEventListener("click", () => {
+      disconnectGame();
+      showPage("home");
+      document.title = "Spiele";
+    });
+
+    restartMemory.addEventListener("click", () => {
+      if (!window.confirm("Möchtest du Memory wirklich neu starten? Der aktuelle Spielstand geht verloren.")) return;
+      sendGameAction({ type: "restart" });
+    });
+
+    restartFindMatch.addEventListener("click", () => {
+      if (!window.confirm("Möchtest du Find Match wirklich neu starten? Die Punkte gehen verloren.")) return;
+      sendGameAction({ type: "restart" });
+    });
+
+    rollYatzyButton.addEventListener("click", () => {
+      sendGameAction({ type: "roll", held: [...yatzyHeld] });
+    });
+
+    restartYatzyButton.addEventListener("click", () => {
+      if (!window.confirm("Möchtest du Yatzy wirklich neu starten? Der aktuelle Spielstand geht verloren.")) return;
+      yatzyHeld = Array(5).fill(false);
+      yatzyHeldPlayer = null;
+      sendGameAction({ type: "restart" });
+    });
+
+    rotateShip.addEventListener("click", toggleShipOrientation);
+
+    startBattleshipButton.addEventListener("click", beginBattleship);
+
+    backFromBattleship.addEventListener("click", () => {
+      disconnectGame();
+      showPage("home");
+      document.title = "Spiele";
+    });
+
+    restartBattleship.addEventListener("click", () => {
+      if (!window.confirm("Möchtest du Schiffe versenken wirklich neu starten? Der aktuelle Spielstand geht verloren.")) return;
+      sendGameAction({ type: "restart" });
+    });
+
+    logout.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/logout", { method: "POST" });
+        if (!response.ok) throw new Error("Abmelden fehlgeschlagen.");
+        disconnectGame();
+        currentAccount = null;
+        currentRoom = null;
+        roomCodeInput.value = "";
+        status.hidden = true;
+        showPage("login");
+        document.title = "Spieleportal – Raum betreten";
+      } catch (error) {
+        if (activeGame === "battleship") battleshipStatus.textContent = error.message;
+        else if (activeGame === "tic-tac-toe") gameStatus.textContent = error.message;
+        else if (activeGame === "memory") memoryStatus.textContent = error.message;
+        else {
+          portalStatus.textContent = error.message || "Abmelden fehlgeschlagen.";
+          portalStatus.hidden = false;
+        }
+      }
+    });
+
+    if (localTestMode) {
+      connectSession("sonni", "LOKAL");
+    } else {
+      fetch("/api/session").then(async (response) => {
+        if (!response.ok) throw new Error("Anmeldestatus konnte nicht geladen werden.");
+        const session = await response.json();
+        if (typeof session.account === "string" && typeof session.room === "string") {
+          connectSession(session.account, session.room);
+        }
+      }).catch((error) => {
+        status.textContent = error.message || "Server nicht erreichbar.";
+        status.hidden = false;
+      });
+    }
+  </script>
+</body>
+</html>
