@@ -1,6 +1,7 @@
 name = "spielesonnis"
 main = "index.js"
 compatibility_date = "2026-10-18"
+workers_dev = true
 
 [assets]
 directory = "."
@@ -14,4 +15,3 @@ bindings = [
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["GameRoom"]
-workers_dev = true
