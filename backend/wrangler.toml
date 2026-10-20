@@ -2,9 +2,14 @@ name = "spielesonnis"
 main = "index.js"
 compatibility_date = "2026-10-18"
 
-[[durable_objects.bindings]]
-name = "GAME_ROOMS"
-class_name = "GameRoom"
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[durable_objects]
+bindings = [
+  { name = "GAME_ROOMS", class_name = "GameRoom" }
+]
 
 [[migrations]]
 tag = "v1"
