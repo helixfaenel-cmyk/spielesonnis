@@ -1,16 +1,7 @@
 name = "spielesonnis"
-main = "src/index.js"
+main = "worker.js"
 compatibility_date = "2026-10-18"
 
 [assets]
 directory = "./public"
 binding = "ASSETS"
-
-[durable_objects]
-bindings = [
-  { name = "GAME_ROOMS", class_name = "GameRoom" }
-]
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["GameRoom"]
