@@ -1,7 +1,15 @@
 const SESSION_COOKIE = "spielportal_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
-const VALID_ACCOUNTS = new Set(["sonni", "felix"]);
-const ROOM_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/u;
+const VALID_ACCOUNTS = new Set(["sonni", "felix", "spectator"]);
+const GLOBAL_ROOM = "GLOBAL";
+const DEFAULT_PLAYER_NAMES = { sonni: "Spieler 1", felix: "Spieler 2", spectator: "Zuschauer" };
+
+export function normalizePlayerName(value) {
+  if (typeof value !== "string") return null;
+  const name = value.trim();
+  if (!name || Array.from(name).length > 24 || /[\u0000-\u001F\u007F]/u.test(name)) return null;
+  return name;
+}
 
 function encodeBase64Url(value) {
   const bytes = new TextEncoder().encode(value);
@@ -29,12 +37,13 @@ async function importSecret(secret) {
   );
 }
 
-export async function createSessionToken(account, room, secret) {
+export async function createSessionToken(account, room, name, secret) {
   const now = Math.floor(Date.now() / 1000);
   const header = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = encodeBase64Url(JSON.stringify({
     sub: account,
     room,
+    name,
     iat: now,
     exp: now + SESSION_DURATION_SECONDS,
   }));
@@ -63,7 +72,8 @@ export async function readSession(request, secret) {
     if (
       header.alg !== "HS256" ||
       !VALID_ACCOUNTS.has(payload.sub) ||
-      !ROOM_CODE_PATTERN.test(payload.room) ||
+      payload.room !== GLOBAL_ROOM ||
+      (payload.name !== undefined && !normalizePlayerName(payload.name)) ||
       !Number.isInteger(payload.exp) ||
       payload.exp <= Math.floor(Date.now() / 1000)
     ) {
@@ -78,7 +88,13 @@ export async function readSession(request, secret) {
       signature,
       new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
     );
-    return valid ? { account: payload.sub, room: payload.room } : null;
+    return valid
+      ? {
+        account: payload.sub,
+        room: payload.room,
+        name: normalizePlayerName(payload.name) || DEFAULT_PLAYER_NAMES[payload.sub],
+      }
+      : null;
   } catch (error) {
     if (error instanceof TypeError || error instanceof SyntaxError || error instanceof DOMException) return null;
     throw error;
@@ -100,4 +116,4 @@ export function jsonResponse(value, init = {}) {
   return new Response(JSON.stringify(value), { ...init, headers });
 }
 
-export { ROOM_CODE_PATTERN };
+export { GLOBAL_ROOM };

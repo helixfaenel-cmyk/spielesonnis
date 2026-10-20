@@ -1,5 +1,8 @@
-name = "spielesonnis"
+name = "spielportal-pages"
+pages_build_output_dir = "."
 compatibility_date = "2026-10-18"
 
-[assets]
-directory = "./"
+[[durable_objects.bindings]]
+name = "GAME_ROOMS"
+class_name = "GameRoom"
+script_name = "spielportal-game-room"

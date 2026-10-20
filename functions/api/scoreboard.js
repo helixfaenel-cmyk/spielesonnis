@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   const results = await Promise.all(GAMES.map(async (game) => {
-    const room = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(`${session.room}:${game}`));
+    const room = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(`global:${game}`));
     const response = await room.fetch(new Request(`https://game-room/api/room/${game}/scoreboard`, {
       headers: { "X-Spielportal-Player": session.account },
     }));
@@ -22,8 +22,8 @@ export async function onRequestGet({ request, env }) {
 
   const wins = { sonni: 0, felix: 0 };
   for (const result of results) {
-    wins.sonni += result.sonni;
-    wins.felix += result.felix;
+    wins.sonni += result.wins.sonni;
+    wins.felix += result.wins.felix;
   }
-  return jsonResponse({ wins });
+  return jsonResponse({ wins, playerNames: results[0].playerNames });
 }

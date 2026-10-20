@@ -31,10 +31,10 @@ Cloudflare kann je nach Nutzung und aktuellen Tarifgrenzen zusätzliche Abrechnu
 
 ## Spielen
 
-1. Auf Gerät 1 **Neuen Raum erstellen** wählen und den angezeigten 8-stelligen Raumcode teilen.
-2. Auf Gerät 2 den Code eingeben und **Mit Raumcode beitreten** wählen.
-3. Beide Geräte öffnen dasselbe Spiel. Spielzüge werden live über den Spielserver synchronisiert.
+1. Für eine Partie allein **Allein gegen Bot** wählen und einen Namen eingeben. Der Bot übernimmt Spieler 2 und spielt auf mittlerem Niveau.
+2. Für ein Spiel zu zweit wählen beide dieselbe Webseite und jeweils **Spieler 1** oder **Spieler 2**. Die Namen lassen sich dabei festlegen und Spielzüge werden live synchronisiert.
+3. Zuschauer wählen **Zuschauer** und können die laufenden Spiele live ansehen. Sie können keine Spielzüge oder Neustarts auslösen.
 
-Der Raumcode ist die Einladung: Teile ihn nur mit der Person, mit der du spielen möchtest. Er ersetzt ein Passwort oder einen persönlichen Account.
+Alle Besucher nutzen denselben gemeinsamen Spielbereich; Raumcodes oder Einladungen sind nicht erforderlich. Der Bot spielt Tic-Tac-Toe, Schiffe versenken, Yatzy, Find Match und Memory.
 
 Für einen lokalen Test auf einem einzelnen Gerät kannst du `?test=local` an die Seitenadresse anhängen. Das ist kein Online-Multiplayer.

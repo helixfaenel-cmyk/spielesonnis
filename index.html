@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101326">
-  <title>Spieleportal – Raum betreten</title>
+  <title>Spieleportal – Spielerauswahl</title>
   <style>
     :root {
       color-scheme: dark;
@@ -698,6 +698,13 @@
       transform: translateY(0);
     }
 
+    .submit:disabled {
+      cursor: not-allowed;
+      filter: grayscale(0.35);
+      opacity: 0.55;
+      transform: none;
+    }
+
     .status {
       margin: 16px 0 0;
       color: #ffd59f;
@@ -750,28 +757,40 @@
 </head>
 <body>
   <main>
+    <p class="status" id="viewer-notice" role="status" hidden>Du bist im Zuschauermodus. Spielzüge und Neustarts sind deaktiviert.</p>
     <section class="card login-card" id="login-page">
       <form id="login-form">
+        <h1>Spielerauswahl</h1>
+        <p class="status">Wähle einen Spielerplatz, spiele allein gegen den Bot oder schaue zu.</p>
         <div class="field">
-          <label for="room-code">Raumcode</label>
+          <label for="player-role">Deine Rolle</label>
           <div class="input-wrap">
-            <input id="room-code" name="room-code" type="text" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="z. B. ABCD2345">
+            <select id="player-role" name="player-role">
+              <option value="sonni">Spieler 1</option>
+              <option value="sonni-bot">Allein gegen Bot</option>
+              <option value="felix">Spieler 2</option>
+              <option value="spectator">Zuschauer</option>
+            </select>
+            <svg class="select-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
           </div>
         </div>
-
-        <div class="game-actions">
-          <button class="submit" id="create-room" type="submit" value="create">Neuen Raum erstellen</button>
-          <button class="game-control" id="join-room" type="submit" value="join">Mit Raumcode beitreten</button>
+        <div class="field" id="player-name-field">
+          <label for="player-name">Dein Name</label>
+          <input id="player-name" name="player-name" type="text" maxlength="24" autocomplete="nickname" value="Spieler 1">
         </div>
+        <button class="submit" id="select-player" type="submit">Auswahl bestätigen</button>
         <p class="status" id="login-status" role="status" aria-live="polite" hidden></p>
       </form>
     </section>
     <section class="card home-card" id="home-page" aria-labelledby="home-title" hidden>
       <header class="home-header">
         <h1 id="home-title">Spiele</h1>
-        <button class="logout" id="logout" type="button">Raum verlassen</button>
+        <button class="logout" id="logout" type="button">Abmelden</button>
       </header>
-      <p class="status" id="room-code-display" role="status">Raumcode: <strong id="active-room-code"></strong> – teile ihn mit dem zweiten Spieler.</p>
+      <p class="status" id="shared-game-info" role="status">Gemeinsamer Spielbereich – alle sehen dieselbe Partie.</p>
+      <p class="status" id="player-role-display" role="status"></p>
       <p class="status" id="portal-status" role="status" aria-live="polite" hidden></p>
       <section class="scoreboard" aria-labelledby="scoreboard-title">
         <h2 id="scoreboard-title">Scoreboard</h2>
@@ -780,8 +799,8 @@
             <tr><th scope="col">Account</th><th scope="col">Siege</th></tr>
           </thead>
           <tbody>
-            <tr><th scope="row">Sonni</th><td id="sonni-wins">0</td></tr>
-            <tr><th scope="row">Felix</th><td id="felix-wins">0</td></tr>
+            <tr><th scope="row" id="sonni-label">Spieler 1</th><td id="sonni-wins">0</td></tr>
+            <tr><th scope="row" id="felix-label">Spieler 2</th><td id="felix-wins">0</td></tr>
           </tbody>
         </table>
       </section>
@@ -841,7 +860,7 @@
         <h1 id="yatzy-title">Yatzy</h1>
         <button class="logout" id="back-from-yatzy" type="button">Zurück</button>
       </header>
-      <p class="game-status" id="yatzy-status" role="status" aria-live="polite">Sonni ist dran.</p>
+      <p class="game-status" id="yatzy-status" role="status" aria-live="polite">Spieler 1 ist dran.</p>
       <div class="yatzy-dice" id="yatzy-dice" role="group" aria-label="Würfel"></div>
       <div class="game-actions">
         <button class="game-control" id="roll-yatzy" type="button">Würfeln (0/3)</button>
@@ -850,7 +869,7 @@
       <div class="yatzy-table-wrap">
         <table class="yatzy-table">
           <thead>
-            <tr><th scope="col">Kategorie</th><th scope="col">Sonni</th><th scope="col">Felix</th></tr>
+            <tr><th scope="col">Kategorie</th><th scope="col" id="yatzy-sonni-label">Spieler 1</th><th scope="col" id="yatzy-felix-label">Spieler 2</th></tr>
           </thead>
           <tbody id="yatzy-scorecard"></tbody>
         </table>
@@ -862,18 +881,18 @@
         <button class="logout" id="back-from-find-match" type="button">Zurück</button>
       </header>
       <div class="find-match-scores" aria-live="polite">
-        <span>Sonni: <strong id="find-match-sonni-score">0</strong></span>
-        <span>Felix: <strong id="find-match-felix-score">0</strong></span>
+        <span><span id="find-match-sonni-label">Spieler 1</span>: <strong id="find-match-sonni-score">0</strong></span>
+        <span><span id="find-match-felix-label">Spieler 2</span>: <strong id="find-match-felix-score">0</strong></span>
       </div>
       <p class="game-status" id="find-match-status" role="status" aria-live="polite">Warte auf den Gegner.</p>
       <div class="find-match-cards">
         <section class="find-match-side" aria-labelledby="find-match-felix-title">
-          <h2 id="find-match-felix-title">Felix – links</h2>
-          <div class="find-match-card" id="find-match-card-0" role="group" aria-label="Felix' Seite"></div>
+          <h2 id="find-match-felix-title">Spieler 2 – links</h2>
+          <div class="find-match-card" id="find-match-card-0" role="group" aria-label="Seite von Spieler 2"></div>
         </section>
         <section class="find-match-side" aria-labelledby="find-match-sonni-title">
-          <h2 id="find-match-sonni-title">Sonni – rechts</h2>
-          <div class="find-match-card" id="find-match-card-1" role="group" aria-label="Sonnis Seite"></div>
+          <h2 id="find-match-sonni-title">Spieler 1 – rechts</h2>
+          <div class="find-match-card" id="find-match-card-1" role="group" aria-label="Seite von Spieler 1"></div>
         </section>
       </div>
       <div class="game-actions">
@@ -886,8 +905,8 @@
         <button class="logout" id="back-from-memory" type="button">Zurück</button>
       </header>
       <div class="memory-scores" aria-live="polite">
-        <span>Sonni: <strong id="memory-sonni-score">0</strong></span>
-        <span>Felix: <strong id="memory-felix-score">0</strong></span>
+        <span><span id="memory-sonni-label">Spieler 1</span>: <strong id="memory-sonni-score">0</strong></span>
+        <span><span id="memory-felix-label">Spieler 2</span>: <strong id="memory-felix-score">0</strong></span>
       </div>
       <p class="game-status" id="memory-status" role="status" aria-live="polite">Warte auf den Gegner.</p>
       <div class="memory-board" id="memory-board" role="group" aria-label="Memory-Spielfeld mit 24 Tierkarten"></div>
@@ -906,9 +925,13 @@
     const yatzyPage = document.querySelector("#yatzy-page");
     const findMatchPage = document.querySelector("#find-match-page");
     const memoryPage = document.querySelector("#memory-page");
-    const roomCodeInput = document.querySelector("#room-code");
+    const playerRole = document.querySelector("#player-role");
+    const playerNameInput = document.querySelector("#player-name");
+    const playerNameField = document.querySelector("#player-name-field");
     const status = document.querySelector("#login-status");
     const portalStatus = document.querySelector("#portal-status");
+    const viewerNotice = document.querySelector("#viewer-notice");
+    const playerNames = { sonni: "Spieler 1", felix: "Spieler 2" };
     const sonniWins = document.querySelector("#sonni-wins");
     const felixWins = document.querySelector("#felix-wins");
     const logout = document.querySelector("#logout");
@@ -950,10 +973,9 @@
     const boardSize = 15;
     const fleetSizes = [5, 4, 3, 3, 2, 2, 2];
     const columnNames = "ABCDEFGHIJKLMNO";
-    const supportedPlayers = new Set(["sonni", "felix"]);
     const activePageStoragePrefix = "spielportal-page-";
     let currentAccount = null;
-    let currentRoom = null;
+    let isSpectator = false;
     const localTestMode = window.location.protocol === "file:" ||
       new URLSearchParams(window.location.search).get("test") === "local";
     const localWins = { sonni: 0, felix: 0 };
@@ -983,6 +1005,45 @@
       [0, 3, 6], [1, 4, 7], [2, 5, 8],
       [0, 4, 8], [2, 4, 6],
     ];
+
+    function playerName(account) {
+      return playerNames[account] || (account === "felix" ? "Spieler 2" : "Spieler 1");
+    }
+
+    function setPlayerNames(names) {
+      if (!names || typeof names !== "object") return;
+      for (const account of ["sonni", "felix"]) {
+        if (typeof names[account] === "string" && names[account].trim()) {
+          playerNames[account] = names[account].trim();
+        }
+      }
+      document.querySelector("#sonni-label").textContent = playerName("sonni");
+      document.querySelector("#felix-label").textContent = playerName("felix");
+      document.querySelector("#yatzy-sonni-label").textContent = playerName("sonni");
+      document.querySelector("#yatzy-felix-label").textContent = playerName("felix");
+      document.querySelector("#find-match-sonni-label").textContent = playerName("sonni");
+      document.querySelector("#find-match-felix-label").textContent = playerName("felix");
+      document.querySelector("#memory-sonni-label").textContent = playerName("sonni");
+      document.querySelector("#memory-felix-label").textContent = playerName("felix");
+      document.querySelector("#find-match-felix-title").textContent = `${playerName("felix")} – links`;
+      document.querySelector("#find-match-sonni-title").textContent = `${playerName("sonni")} – rechts`;
+      findMatchCards[0].setAttribute("aria-label", `Seite von ${playerName("felix")}`);
+      findMatchCards[1].setAttribute("aria-label", `Seite von ${playerName("sonni")}`);
+      if (currentAccount && !isSpectator) {
+        document.querySelector("#player-role-display").textContent =
+          `${playerName(currentAccount)} spielt als ${currentAccount === "sonni" ? "Spieler 1" : "Spieler 2"}${playerNames.felix === "Bot" && currentAccount === "sonni" ? " gegen den Bot" : ""}.`;
+      }
+    }
+
+    function updateLoginRole() {
+      const isViewer = playerRole.value === "spectator";
+      playerNameField.hidden = isViewer;
+      if (!isViewer) {
+        playerNameInput.value = playerRole.value === "felix" ? "Spieler 2" : "Spieler 1";
+      }
+    }
+
+    updateLoginRole();
     const yatzyCategories = [
       ["ones", "Einser"], ["twos", "Zweier"], ["threes", "Dreier"],
       ["fours", "Vierer"], ["fives", "Fünfer"], ["sixes", "Sechser"],
@@ -1021,7 +1082,7 @@
         const wasShot = shots[position];
         const shipId = fleet.grid[position];
 
-        if (isPlayer && shipId !== -1) {
+        if (shipId !== -1 && (isPlayer || isSpectator)) {
           cell.classList.add("ship");
           if (!battleStarted && shipId === selectedShipId) cell.classList.add("selected");
         }
@@ -1037,9 +1098,9 @@
         }
 
         if (isPlayer) {
-          cell.disabled = battleStarted || (battleshipState && battleshipState.ready);
+          cell.disabled = isSpectator || battleStarted || (battleshipState && battleshipState.ready);
         } else {
-          cell.disabled = !battleStarted || Boolean(wasShot) || battleshipFinished ||
+          cell.disabled = isSpectator || !battleStarted || Boolean(wasShot) || battleshipFinished ||
             !battleshipState ||
             battleshipState.currentPlayer !== (localTestMode ? battleshipState.account : currentAccount);
           cell.addEventListener("click", () => fireAt(position));
@@ -1055,6 +1116,7 @@
     }
 
     function sendGameAction(action) {
+      if (isSpectator) return false;
       if (localTestMode) {
         applyLocalAction(action);
         return true;
@@ -1090,7 +1152,7 @@
         return;
       }
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      gameSocket = new WebSocket(`${protocol}//${window.location.host}/api/room/${game}?room=${encodeURIComponent(currentRoom)}`);
+      gameSocket = new WebSocket(`${protocol}//${window.location.host}/api/room/${game}`);
       const socket = gameSocket;
 
       socket.addEventListener("open", () => {
@@ -1125,6 +1187,7 @@
           return;
         }
         if (message.type !== "state" || message.game !== game) return;
+        if (message.playerNames) setPlayerNames(message.playerNames);
         if (game === "battleship") renderBattleshipState(message);
         else if (game === "yatzy") renderYatzyState(message);
         else if (game === "find-match") renderFindMatchState(message);
@@ -1160,7 +1223,7 @@
       cells.forEach((cell, index) => {
         cell.textContent = board[index];
         cell.disabled = Boolean(board[index]) || gameFinished ||
-          (!localTestMode && state.currentPlayer !== currentAccount);
+          isSpectator || (!localTestMode && state.currentPlayer !== currentAccount);
         cell.classList.toggle("winning-cell", Boolean(winningLine && winningLine.includes(index)));
         if (board[index]) cell.dataset.mark = board[index];
         else cell.removeAttribute("data-mark");
@@ -1168,60 +1231,67 @@
       });
 
       if (state.winner) {
-        gameStatus.textContent = state.winner === currentAccount ? "Du hast gewonnen!" : `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen.`;
+        gameStatus.textContent = state.winner === currentAccount ? "Du hast gewonnen!" : `${playerName(state.winner)} hat gewonnen.`;
       } else if (state.draw) {
         gameStatus.textContent = "Unentschieden";
       } else if (localTestMode) {
-        gameStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran (${state.currentPlayer === "sonni" ? "X" : "O"}).`;
+        gameStatus.textContent = `${playerName(state.currentPlayer)} ist dran (${state.currentPlayer === "sonni" ? "X" : "O"}).`;
       } else if (!state.opponentOnline) {
-        gameStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+        gameStatus.textContent = `Warte auf ${playerName(currentAccount === "sonni" ? "felix" : "sonni")}.`;
       } else {
-        gameStatus.textContent = state.currentPlayer === currentAccount ? `Du bist dran (${state.symbol}).` : `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+        gameStatus.textContent = state.currentPlayer === currentAccount ? `Du bist dran (${state.symbol}).` : `${playerName(state.currentPlayer)} ist dran.`;
       }
     }
 
     function renderBattleshipState(state) {
       battleshipState = state;
       playerFleet = state.fleet;
-      enemyFleet = { grid: Array(boardSize * boardSize).fill(-1), ships: [] };
+      enemyFleet = state.opponentFleet || { grid: Array(boardSize * boardSize).fill(-1), ships: [] };
       playerShots = state.shotsOnEnemy.map((shot) => shot || "");
       enemyShots = state.shotsOnMe.map((shot) => shot || "");
       sunkEnemyPositions = new Set(state.sunkOnEnemy);
       battleStarted = state.started;
       battleshipFinished = Boolean(state.winner);
-      const viewAccount = state.account || currentAccount;
-      const opponentName = viewAccount === "sonni" ? "Felix" : "Sonni";
-      if (localTestMode) {
-        playerBoardTitle.textContent = `${viewAccount === "sonni" ? "Sonni" : "Felix"}s Flotte`;
+      const viewAccount = state.account === "spectator" ? "sonni" : state.account || currentAccount;
+      const opponent = viewAccount === "sonni" ? "felix" : "sonni";
+      const opponentName = playerName(opponent);
+      if (localTestMode || isSpectator) {
+        playerBoardTitle.textContent = `${playerName(viewAccount)}s Flotte`;
         enemyBoardTitle.textContent = opponentName;
       }
       if (state.started || state.ready) selectedShipId = null;
-      rotateShip.disabled = selectedShipId === null || state.started || state.ready;
-      startBattleshipButton.disabled = state.started || state.ready;
+      rotateShip.disabled = isSpectator || selectedShipId === null || state.started || state.ready;
+      startBattleshipButton.disabled = isSpectator || state.started || state.ready;
       startBattleshipButton.textContent = state.ready
         ? "Warte auf Gegner"
-        : localTestMode ? `Bereit: ${viewAccount === "sonni" ? "Sonni" : "Felix"}` : "Bereit";
+        : localTestMode ? `Bereit: ${playerName(viewAccount)}` : "Bereit";
 
       if (state.winner) {
-        battleshipStatus.textContent = state.winner === currentAccount
+        battleshipStatus.textContent = !isSpectator && state.winner === currentAccount
           ? "Du hast gewonnen!"
-          : `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen.`;
+          : `${playerName(state.winner)} hat gewonnen.`;
       } else if (!state.started) {
         if (localTestMode) {
-          battleshipStatus.textContent = `Flotte für ${viewAccount === "sonni" ? "Sonni" : "Felix"} aufstellen und Bereit wählen.`;
+          battleshipStatus.textContent = `Flotte für ${playerName(viewAccount)} aufstellen und Bereit wählen.`;
+        } else if (isSpectator) {
+          battleshipStatus.textContent = state.ready
+            ? `Warte auf ${playerName(opponent)}.`
+            : state.opponentReady
+              ? `Warte auf ${playerName(viewAccount)}.`
+              : "Die Spieler stellen ihre Flotten auf.";
         } else if (state.ready) {
-          battleshipStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+          battleshipStatus.textContent = `Warte auf ${playerName(opponent)}.`;
         } else if (state.opponentReady) {
           battleshipStatus.textContent = "Deine Flotte aufstellen und dann Bereit wählen.";
         } else {
-          battleshipStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}. Stelle in der Zwischenzeit deine Flotte auf.`;
+          battleshipStatus.textContent = `Warte auf ${playerName(opponent)}. Stelle in der Zwischenzeit deine Flotte auf.`;
         }
-      } else if (state.currentPlayer === viewAccount) {
+      } else if (state.currentPlayer === viewAccount && !isSpectator) {
         battleshipStatus.textContent = localTestMode
-          ? `${viewAccount === "sonni" ? "Sonni" : "Felix"} ist dran.`
+          ? `${playerName(viewAccount)} ist dran.`
           : "Du bist dran.";
       } else {
-        battleshipStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+        battleshipStatus.textContent = `${playerName(state.currentPlayer)} ist dran.`;
       }
 
       renderFleetBoard(enemyBoardElement, false);
@@ -1278,15 +1348,15 @@
       rollYatzyButton.disabled = !isTurn || state.rollCount >= 3;
       rollYatzyButton.textContent = `Würfeln (${state.rollCount}/3)`;
 
-      const playingName = playingAccount === "sonni" ? "Sonni" : "Felix";
+      const playingName = playerName(playingAccount);
       if (state.winner) {
-        yatzyStatus.textContent = `${state.winner === "sonni" ? "Sonni" : "Felix"} hat gewonnen!`;
+        yatzyStatus.textContent = `${playerName(state.winner)} hat gewonnen!`;
       } else if (state.draw) {
         yatzyStatus.textContent = "Unentschieden";
       } else if (isTurn) {
         yatzyStatus.textContent = `${playingName} ist dran. Würfe: ${state.rollCount}/3.`;
       } else {
-        yatzyStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+        yatzyStatus.textContent = `${playerName(state.currentPlayer)} ist dran.`;
       }
 
       yatzyScorecard.replaceChildren();
@@ -1427,7 +1497,7 @@
           button.className = "find-match-item";
           button.type = "button";
           const sideAccount = cardIndex === 0 ? "felix" : "sonni";
-          button.disabled = Boolean(state.winner) || (!localTestMode && state.account !== sideAccount);
+          button.disabled = isSpectator || Boolean(state.winner) || (!localTestMode && state.account !== sideAccount);
           const shapeName = item.shape === "circle" ? "Kreis"
             : item.shape === "square" ? "Quadrat"
               : item.shape === "triangle" ? "Dreieck"
@@ -1442,11 +1512,11 @@
       }
 
       if (state.winner) {
-        findMatchStatus.textContent = `${state.winner === "sonni" ? "Sonni" : "Felix"} hat mit 10 Punkten gewonnen!`;
+        findMatchStatus.textContent = `${playerName(state.winner)} hat mit 10 Punkten gewonnen!`;
       } else if (localTestMode) {
-        findMatchStatus.textContent = `Links Felix, rechts Sonni. Wer zuerst das passende Item klickt, erhält einen Punkt. Runde ${state.round}.`;
+        findMatchStatus.textContent = `Links ${playerName("felix")}, rechts ${playerName("sonni")}. Wer zuerst das passende Item klickt, erhält einen Punkt. Runde ${state.round}.`;
       } else if (state.lastScorer) {
-        findMatchStatus.textContent = `${state.lastScorer === "sonni" ? "Sonni" : "Felix"} erhält einen Punkt. Runde ${state.round}.`;
+        findMatchStatus.textContent = `${playerName(state.lastScorer)} erhält einen Punkt. Runde ${state.round}.`;
       } else {
         findMatchStatus.textContent = `Runde ${state.round}: Klicke zuerst auf die passende Form mit gleicher Farbe.`;
       }
@@ -1471,8 +1541,8 @@
       });
 
       if (state.winner) {
-        const winnerName = state.winner === "sonni" ? "Sonni" : "Felix";
-        memoryStatus.textContent = localTestMode || state.winner !== currentAccount
+        const winnerName = playerName(state.winner);
+        memoryStatus.textContent = localTestMode || isSpectator || state.winner !== currentAccount
           ? `${winnerName} hat Memory gewonnen!`
           : "Du hast Memory gewonnen!";
       } else if (state.draw) {
@@ -1480,13 +1550,13 @@
       } else if (state.mismatchPending) {
         memoryStatus.textContent = "Kein Paar. Die Karten werden umgedreht …";
       } else if (localTestMode) {
-        memoryStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran. Bei einem Paar gibt es einen Punkt und einen weiteren Zug.`;
+        memoryStatus.textContent = `${playerName(state.currentPlayer)} ist dran. Bei einem Paar gibt es einen Punkt und einen weiteren Zug.`;
       } else if (state.currentPlayer === currentAccount) {
         memoryStatus.textContent = "Du bist dran. Finde ein Tierpaar!";
       } else if (!state.opponentOnline) {
-        memoryStatus.textContent = `Warte auf ${currentAccount === "sonni" ? "Felix" : "Sonni"}.`;
+        memoryStatus.textContent = `Warte auf ${playerName(currentAccount === "sonni" ? "felix" : "sonni")}.`;
       } else {
-        memoryStatus.textContent = `${state.currentPlayer === "sonni" ? "Sonni" : "Felix"} ist dran.`;
+        memoryStatus.textContent = `${playerName(state.currentPlayer)} ist dran.`;
       }
     }
 
@@ -1796,16 +1866,25 @@
       felixWins.textContent = String(localWins.felix);
     }
 
-    function connectSession(accountName, roomCode) {
+    function connectSession(accountName, name) {
       currentAccount = accountName;
-      currentRoom = roomCode;
-      document.querySelector("#active-room-code").textContent = roomCode;
+      isSpectator = accountName === "spectator";
+      viewerNotice.hidden = !isSpectator;
+      if (["sonni", "felix"].includes(accountName) && typeof name === "string" && name.trim()) {
+        playerNames[accountName] = name.trim();
+      }
+      setPlayerNames(playerNames);
+      document.querySelector("#player-role-display").textContent = isSpectator
+        ? "Du schaust als Zuschauer zu."
+        : `${playerName(accountName)} spielt als ${accountName === "sonni" ? "Spieler 1" : "Spieler 2"}${playerNames.felix === "Bot" && accountName === "sonni" ? " gegen den Bot" : ""}.`;
       logout.hidden = localTestMode;
-      openTicTacToe.disabled = !supportedPlayers.has(accountName);
-      openBattleship.disabled = !supportedPlayers.has(accountName);
-      openYatzy.disabled = !supportedPlayers.has(accountName);
-      openFindMatch.disabled = !supportedPlayers.has(accountName);
-      openMemory.disabled = !supportedPlayers.has(accountName);
+      openTicTacToe.disabled = false;
+      openBattleship.disabled = false;
+      openYatzy.disabled = false;
+      openFindMatch.disabled = false;
+      openMemory.disabled = false;
+      document.querySelectorAll("#restart-game, #rotate-ship, #start-battleship, #restart-battleship, #roll-yatzy, #restart-yatzy, #restart-find-match, #restart-memory")
+        .forEach((control) => { control.hidden = isSpectator; });
       showPage("home", false);
       document.title = "Spiele";
 
@@ -1843,6 +1922,7 @@
         const response = await fetch("/api/scoreboard");
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Scoreboard konnte nicht geladen werden.");
+        setPlayerNames(result.playerNames);
         sonniWins.textContent = String(result.wins.sonni);
         felixWins.textContent = String(result.wins.felix);
       } catch (error) {
@@ -1887,7 +1967,7 @@
     }
 
     function selectOrMoveShip(position) {
-      if (!playerFleet || (battleshipState && battleshipState.ready)) return;
+      if (isSpectator || !playerFleet || (battleshipState && battleshipState.ready)) return;
       const shipId = playerFleet.grid[position];
       if (shipId !== -1) {
         selectedShipId = shipId;
@@ -2103,30 +2183,31 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       status.hidden = true;
-      const action = event.submitter && event.submitter.value;
-      const roomCode = roomCodeInput.value.trim().toUpperCase();
-      if (action === "join" && !/^[A-HJ-NP-Z2-9]{8}$/u.test(roomCode)) {
-        status.textContent = "Bitte gib einen gültigen Raumcode mit 8 Zeichen ein.";
+      const selectedRole = playerRole.value;
+      const account = selectedRole === "sonni-bot" ? "sonni" : selectedRole;
+      const name = playerNameInput.value.trim();
+      if (account !== "spectator" && (!name || Array.from(name).length > 24)) {
+        status.textContent = "Der Name muss 1 bis 24 Zeichen lang sein.";
         status.hidden = false;
         return;
       }
 
       try {
-        const endpoint = action === "create" ? "/api/rooms/create" : "/api/rooms/join";
-        const response = await fetch(endpoint, {
+        const response = await fetch("/api/players/select", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(action === "create" ? {} : { room: roomCode }),
+          body: JSON.stringify({ account, name, bot: selectedRole === "sonni-bot" }),
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Raum konnte nicht geöffnet werden.");
-        roomCodeInput.value = "";
-        connectSession(result.account, result.room);
+        if (!response.ok) throw new Error(result.error || "Auswahl konnte nicht gespeichert werden.");
+        connectSession(result.account, result.name);
       } catch (error) {
-        status.textContent = error.message || "Raum konnte nicht geöffnet werden.";
+        status.textContent = error.message || "Auswahl konnte nicht gespeichert werden.";
         status.hidden = false;
       }
     });
+
+    playerRole.addEventListener("change", updateLoginRole);
 
     openTicTacToe.addEventListener("click", () => {
       disconnectGame();
@@ -2237,11 +2318,13 @@
         if (!response.ok) throw new Error("Abmelden fehlgeschlagen.");
         disconnectGame();
         currentAccount = null;
-        currentRoom = null;
-        roomCodeInput.value = "";
+        isSpectator = false;
+        viewerNotice.hidden = true;
+        document.querySelectorAll("#restart-game, #rotate-ship, #start-battleship, #restart-battleship, #roll-yatzy, #restart-yatzy, #restart-find-match, #restart-memory")
+          .forEach((control) => { control.hidden = false; });
         status.hidden = true;
         showPage("login");
-        document.title = "Spieleportal – Raum betreten";
+        document.title = "Spieleportal – Spielerauswahl";
       } catch (error) {
         if (activeGame === "battleship") battleshipStatus.textContent = error.message;
         else if (activeGame === "tic-tac-toe") gameStatus.textContent = error.message;
@@ -2254,13 +2337,13 @@
     });
 
     if (localTestMode) {
-      connectSession("sonni", "LOKAL");
+      connectSession("sonni", "Spieler 1");
     } else {
       fetch("/api/session").then(async (response) => {
         if (!response.ok) throw new Error("Anmeldestatus konnte nicht geladen werden.");
         const session = await response.json();
-        if (typeof session.account === "string" && typeof session.room === "string") {
-          connectSession(session.account, session.room);
+        if (typeof session.account === "string") {
+          connectSession(session.account, session.name);
         }
       }).catch((error) => {
         status.textContent = error.message || "Server nicht erreichbar.";

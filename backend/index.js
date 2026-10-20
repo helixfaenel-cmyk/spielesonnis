@@ -67,6 +67,8 @@ function makeFleet() {
 
 function createInitialState() {
   return {
+    botEnabled: false,
+    playerNames: { sonni: "Spieler 1", felix: "Spieler 2" },
     wins: { sonni: 0, felix: 0 },
     ticTacToe: {
       board: Array(9).fill(null),
@@ -102,6 +104,7 @@ function createMemoryGame() {
     winner: null,
     draw: false,
     mismatchUntil: null,
+    botKnowledge: {},
   };
 }
 
@@ -241,18 +244,25 @@ function allShipsSunk(fleet) {
 }
 
 function makeView(state, account, online) {
+  const viewAccount = PLAYERS.includes(account) ? account : "sonni";
+  const opponentOnline = account === "spectator"
+    ? state.botEnabled || PLAYERS.some((player) => online.has(player))
+    : (state.botEnabled && viewAccount === "sonni") ||
+      online.has(viewAccount === "sonni" ? "felix" : "sonni");
   if (state.game === "tic-tac-toe") {
     const game = state.ticTacToe;
     return {
       type: "state",
       game: "tic-tac-toe",
       account,
-      symbol: account === "sonni" ? "X" : "O",
+      playerNames: state.playerNames,
+      isSpectator: account === "spectator",
+      symbol: viewAccount === "sonni" ? "X" : "O",
       board: game.board,
       currentPlayer: game.currentPlayer,
       winner: game.winner,
       draw: game.draw,
-      opponentOnline: online.has(account === "sonni" ? "felix" : "sonni"),
+      opponentOnline,
     };
   }
 
@@ -262,6 +272,8 @@ function makeView(state, account, online) {
       type: "state",
       game: "yatzy",
       account,
+      playerNames: state.playerNames,
+      isSpectator: account === "spectator",
       dice: game.dice,
       rollCount: game.rollCount,
       currentPlayer: game.currentPlayer,
@@ -272,7 +284,7 @@ function makeView(state, account, online) {
       },
       winner: game.winner,
       draw: game.draw,
-      opponentOnline: online.has(account === "sonni" ? "felix" : "sonni"),
+      opponentOnline,
     };
   }
 
@@ -282,13 +294,15 @@ function makeView(state, account, online) {
       type: "state",
       game: "find-match",
       account,
+      playerNames: state.playerNames,
+      isSpectator: account === "spectator",
       round: game.round,
       cards: game.cards,
       scores: game.scores,
       lastScorer: game.lastScorer,
       winner: game.winner,
       targetScore: FIND_MATCH_TARGET_SCORE,
-      opponentOnline: online.has(account === "sonni" ? "felix" : "sonni"),
+      opponentOnline,
     };
   }
 
@@ -298,6 +312,8 @@ function makeView(state, account, online) {
       type: "state",
       game: "memory",
       account,
+      playerNames: state.playerNames,
+      isSpectator: account === "spectator",
       cards: game.cards,
       revealed: game.revealed,
       currentPlayer: game.currentPlayer,
@@ -305,19 +321,22 @@ function makeView(state, account, online) {
       winner: game.winner,
       draw: game.draw,
       mismatchPending: Boolean(game.mismatchUntil),
-      opponentOnline: online.has(account === "sonni" ? "felix" : "sonni"),
+      opponentOnline,
     };
   }
 
   const game = state.battleship;
-  const opponent = account === "sonni" ? "felix" : "sonni";
-  const player = game.players[account];
+  const opponent = viewAccount === "sonni" ? "felix" : "sonni";
+  const player = game.players[viewAccount];
   const opposingPlayer = game.players[opponent];
   return {
     type: "state",
     game: "battleship",
     account,
+    playerNames: state.playerNames,
+    isSpectator: account === "spectator",
     fleet: player.fleet,
+    opponentFleet: account === "spectator" ? opposingPlayer.fleet : null,
     shotsOnEnemy: player.shots,
     shotsOnMe: opposingPlayer.shots,
     sunkOnEnemy: opposingPlayer.fleet.ships
@@ -328,7 +347,7 @@ function makeView(state, account, online) {
     started: game.started,
     currentPlayer: game.currentPlayer,
     winner: game.winner,
-    opponentOnline: online.has(opponent),
+    opponentOnline: (state.botEnabled && opponent === "felix") || online.has(opponent),
   };
 }
 
@@ -339,13 +358,18 @@ export class GameRoom {
     this.roomRegistered = false;
     this.statePromise = ctx.blockConcurrencyWhile(async () => {
       this.state = await ctx.storage.get("state") || createInitialState();
+      this.state.botEnabled ||= false;
       this.roomRegistered = await ctx.storage.get("roomRegistered") || false;
+      this.registeredPlayers = await ctx.storage.get("registeredPlayers") ||
+        (this.roomRegistered ? ["sonni"] : []);
+      this.state.playerNames ||= { sonni: "Spieler 1", felix: "Spieler 2" };
       this.state.wins ||= { sonni: 0, felix: 0 };
       this.state.ticTacToe.startingPlayer ||= this.state.ticTacToe.currentPlayer || "sonni";
       this.state.ticTacToe.nextStarter ||= this.state.ticTacToe.startingPlayer;
       this.state.yatzy ||= createYatzyGame();
       this.state["find-match"] ||= createFindMatchGame();
       this.state.memory ||= createMemoryGame();
+      this.state.memory.botKnowledge ||= {};
       await ctx.storage.put("state", this.state);
     });
   }
@@ -353,27 +377,96 @@ export class GameRoom {
   async fetch(request) {
     await this.statePromise;
     const account = request.headers.get("X-Spielportal-Player");
+    const name = request.headers.get("X-Spielportal-Name");
     const path = new URL(request.url).pathname.split("/").filter(Boolean);
     const game = path.find((part) =>
       part === "tic-tac-toe" || part === "battleship" || part === "yatzy" || part === "find-match" || part === "memory");
-    if (!PLAYERS.includes(account)) return new Response("Unauthorized", { status: 401 });
     if (!["tic-tac-toe", "battleship", "yatzy", "find-match", "memory"].includes(game)) return new Response("Unknown game", { status: 404 });
 
     if (path.at(-1) === "register") {
-      if (request.method !== "POST" || account !== "sonni") return new Response("Forbidden", { status: 403 });
+      if (request.method !== "POST" || !PLAYERS.includes(account) || !name || this.roomRegistered) {
+        return new Response("Forbidden", { status: 403 });
+      }
       this.roomRegistered = true;
+      this.registeredPlayers = [account];
+      this.state.playerNames[account] = name;
       await this.ctx.storage.put("roomRegistered", true);
+      await this.ctx.storage.put("registeredPlayers", this.registeredPlayers);
+      await this.ctx.storage.put("state", this.state);
       return Response.json({ registered: true });
+    }
+    if (path.at(-1) === "claim") {
+      if (request.method !== "POST" || !PLAYERS.includes(account) || !name) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      const botEnabled = account === "sonni" && request.headers.get("X-Spielportal-Bot") === "true";
+      if (account === "felix" && this.state.botEnabled) {
+        return new Response("Player slot reserved for bot", { status: 409 });
+      }
+      if (botEnabled && this.registeredPlayers.includes("felix") && !this.state.botEnabled) {
+        return new Response("Player slot already taken", { status: 409 });
+      }
+      if (!this.roomRegistered) {
+        this.roomRegistered = true;
+      }
+      const botModeChanged = this.state.botEnabled !== botEnabled;
+      if (!this.registeredPlayers.includes(account)) {
+        this.registeredPlayers.push(account);
+      }
+      if (botModeChanged) {
+        this.state.ticTacToe = createInitialState().ticTacToe;
+        this.state.battleship = createInitialState().battleship;
+        this.state.yatzy = createYatzyGame();
+        this.state["find-match"] = createFindMatchGame();
+        this.state.memory = createMemoryGame();
+        await this.ctx.storage.deleteAlarm();
+      }
+      this.state.botEnabled = botEnabled;
+      if (botEnabled) {
+        if (!this.registeredPlayers.includes("felix")) this.registeredPlayers.push("felix");
+        this.state.playerNames.felix = "Bot";
+        this.state.battleship.players.felix.ready = true;
+        if (this.state.battleship.players.sonni.ready) this.state.battleship.started = true;
+      } else if (account === "sonni" && this.state.playerNames.felix === "Bot") {
+        this.registeredPlayers = this.registeredPlayers.filter((player) => player !== "felix");
+        this.state.playerNames.felix = "Spieler 2";
+        this.state.battleship.players.felix.ready = false;
+        this.state.battleship.started = false;
+      }
+      this.state.playerNames[account] = name;
+      await this.ctx.storage.put("roomRegistered", true);
+      await this.ctx.storage.put("registeredPlayers", this.registeredPlayers);
+      await this.ctx.storage.put("state", this.state);
+      return Response.json({ claimed: true });
     }
     if (path.at(-1) === "status") {
       return this.roomRegistered
         ? Response.json({ registered: true })
         : new Response("Room not found", { status: 404 });
     }
+    if (path.at(-1) === "join") {
+      if (request.method !== "POST" || !PLAYERS.includes(account) || !name) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      if (!this.roomRegistered) return new Response("Room not found", { status: 404 });
+      if (this.registeredPlayers.includes(account)) {
+        if (this.state.playerNames[account] !== name) return new Response("Player slot already taken", { status: 409 });
+        return Response.json({ joined: true });
+      }
+      this.registeredPlayers.push(account);
+      this.state.playerNames[account] = name;
+      await this.ctx.storage.put("registeredPlayers", this.registeredPlayers);
+      await this.ctx.storage.put("state", this.state);
+      return Response.json({ joined: true });
+    }
+    if (!PLAYERS.includes(account) && account !== "spectator") return new Response("Unauthorized", { status: 401 });
 
     if (path.at(-1) === "scoreboard") {
       if (request.method !== "GET") return new Response("Method not allowed", { status: 405 });
-      return Response.json(this.state.wins, { headers: { "Cache-Control": "no-store" } });
+      return Response.json(
+        { wins: this.state.wins, playerNames: this.state.playerNames },
+        { headers: { "Cache-Control": "no-store" } },
+      );
     }
     if (!this.roomRegistered) return new Response("Room not found", { status: 404 });
 
@@ -384,7 +477,9 @@ export class GameRoom {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket upgrade required", { status: 426 });
     }
-    if (this.getOnlinePlayers().has(account)) return new Response("This player is already connected", { status: 409 });
+    if (PLAYERS.includes(account) && this.getOnlinePlayers().has(account)) {
+      return new Response("This player is already connected", { status: 409 });
+    }
 
     this.state.game = game;
     await this.ctx.storage.put("state", this.state);
@@ -394,6 +489,7 @@ export class GameRoom {
     this.ctx.acceptWebSocket(server, [account]);
     server.send(JSON.stringify(makeView(this.state, account, this.getOnlinePlayers())));
     this.broadcast();
+    await this.scheduleBotTurn();
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -432,6 +528,7 @@ export class GameRoom {
         };
       } else if (this.state.game === "battleship") {
         this.state.battleship = createInitialState().battleship;
+        if (this.state.botEnabled) this.state.battleship.players.felix.ready = true;
       } else if (this.state.game === "find-match") {
         this.state["find-match"] = createFindMatchGame();
       } else if (this.state.game === "memory") {
@@ -454,6 +551,8 @@ export class GameRoom {
 
     if (this.state.game === "memory" && this.state.memory.mismatchUntil) {
       await this.ctx.storage.setAlarm(this.state.memory.mismatchUntil);
+    } else {
+      await this.scheduleBotTurn();
     }
     const winner = this.getWinner();
     if (!previousWinner && winner) {
@@ -471,16 +570,189 @@ export class GameRoom {
   async alarm() {
     await this.statePromise;
     const game = this.state.memory;
-    if (this.state.game !== "memory" || !game.mismatchUntil) return;
-    if (game.mismatchUntil > Date.now()) {
-      await this.ctx.storage.setAlarm(game.mismatchUntil);
-      return;
+    if (this.state.game === "memory" && game.mismatchUntil) {
+      if (game.mismatchUntil > Date.now()) {
+        await this.ctx.storage.setAlarm(game.mismatchUntil);
+        return;
+      }
+      game.revealed = [];
+      game.currentPlayer = game.currentPlayer === "sonni" ? "felix" : "sonni";
+      game.mismatchUntil = null;
+      await this.ctx.storage.put("state", this.state);
+      this.broadcast();
     }
-    game.revealed = [];
-    game.currentPlayer = game.currentPlayer === "sonni" ? "felix" : "sonni";
-    game.mismatchUntil = null;
+    if (!this.state.botEnabled || !this.isBotTurn()) return;
+    const previousWinner = this.getWinner();
+    const socket = { send() {} };
+
+    if (this.state.game === "tic-tac-toe") {
+      this.applyTicTacToeAction("felix", { type: "move", position: this.chooseBotTicTacToeMove() }, socket);
+    } else if (this.state.game === "battleship") {
+      this.applyBattleshipAction("felix", { type: "shoot", position: this.chooseBotBattleshipShot() }, socket);
+    } else if (this.state.game === "yatzy") {
+      this.playBotYatzyTurn(socket);
+    } else if (this.state.game === "find-match") {
+      const card = this.state["find-match"].cards[0];
+      const index = card.findIndex((item) =>
+        item.shape === this.state["find-match"].matchKey.shape &&
+        item.color === this.state["find-match"].matchKey.color);
+      if (index !== -1) {
+        this.applyFindMatchAction("felix", {
+          type: "claim",
+          card: 0,
+          index,
+          round: this.state["find-match"].round,
+        }, socket);
+      }
+    } else {
+      this.playBotMemoryFlip(socket);
+    }
+
+    const winner = this.getWinner();
+    if (!previousWinner && winner) this.state.wins[winner] += 1;
+    if (this.state.game === "memory" && this.state.memory.mismatchUntil) {
+      await this.ctx.storage.setAlarm(this.state.memory.mismatchUntil);
+    } else {
+      await this.scheduleBotTurn();
+    }
     await this.ctx.storage.put("state", this.state);
     this.broadcast();
+  }
+
+  isBotTurn() {
+    if (this.getWinner()) return false;
+    if (this.state.game === "find-match") return true;
+    if (this.state.game === "tic-tac-toe") {
+      return !this.state.ticTacToe.draw && this.state.ticTacToe.currentPlayer === "felix";
+    }
+    if (this.state.game === "battleship") {
+      const game = this.state.battleship;
+      return game.started && game.currentPlayer === "felix";
+    }
+    const game = this.state[this.state.game];
+    return !game.draw && game.currentPlayer === "felix";
+  }
+
+  async scheduleBotTurn() {
+    if (this.state.botEnabled && this.isBotTurn()) {
+      await this.ctx.storage.setAlarm(Date.now() + 800);
+    }
+  }
+
+  chooseBotTicTacToeMove() {
+    const board = this.state.ticTacToe.board;
+    const lines = WINNING_LINES;
+    const findTacticalMove = (mark) => {
+      for (const line of lines) {
+        const marks = line.filter((position) => board[position] === mark).length;
+        const empty = line.find((position) => board[position] === null);
+        if (marks === 2 && empty !== undefined) return empty;
+      }
+      return null;
+    };
+    const win = findTacticalMove("O");
+    if (win !== null) return win;
+    const block = findTacticalMove("X");
+    if (block !== null) return block;
+
+    const empty = board.map((cell, position) => cell === null ? position : -1).filter((position) => position !== -1);
+    if (empty.includes(4)) return 4;
+    const corners = empty.filter((position) => [0, 2, 6, 8].includes(position));
+    const choices = corners.length ? corners : empty;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  chooseBotBattleshipShot() {
+    const game = this.state.battleship;
+    const bot = game.players.felix;
+    const human = game.players.sonni;
+    const available = bot.shots.map((shot, position) => shot === null ? position : -1).filter((position) => position !== -1);
+    const activeHits = bot.shots
+      .map((shot, position) => shot === "hit" ? position : -1)
+      .filter((position) => position !== -1)
+      .filter((position) => {
+        const shipId = human.fleet.grid[position];
+        return shipId !== -1 && human.fleet.ships[shipId].hits < human.fleet.ships[shipId].positions.length;
+      });
+    const adjacent = [];
+    for (const hit of activeHits) {
+      const row = Math.floor(hit / BOARD_SIZE);
+      const column = hit % BOARD_SIZE;
+      for (const [nextRow, nextColumn] of [[row - 1, column], [row + 1, column], [row, column - 1], [row, column + 1]]) {
+        if (nextRow >= 0 && nextRow < BOARD_SIZE && nextColumn >= 0 && nextColumn < BOARD_SIZE) {
+          const position = nextRow * BOARD_SIZE + nextColumn;
+          if (bot.shots[position] === null) adjacent.push(position);
+        }
+      }
+    }
+    const candidates = adjacent.length
+      ? [...new Set(adjacent)]
+      : available.filter((position) =>
+        (Math.floor(position / BOARD_SIZE) + position % BOARD_SIZE) % 2 === 0);
+    const choices = candidates.length ? candidates : available;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  playBotYatzyTurn(socket) {
+    const game = this.state.yatzy;
+    while (game.rollCount < 3) {
+      const counts = Array(7).fill(0);
+      game.dice.forEach((die) => { counts[die] += 1; });
+      let targetFace = 0;
+      for (let face = 1; face <= 6; face += 1) {
+        if (counts[face] > (targetFace ? counts[targetFace] : 1) ||
+            (counts[face] === counts[targetFace] && face > targetFace)) targetFace = face;
+      }
+      const keep = game.dice.map((die) => die === targetFace);
+      this.applyYatzyAction("felix", { type: "roll", held: keep }, socket);
+    }
+
+    const available = YATZY_CATEGORIES.filter((category) => game.scores.felix[category] === null);
+    const scored = available.map((category) => ({
+      category,
+      value: scoreYatzyCategory(category, game.dice),
+      max: category === "yatzy" ? 50
+        : category === "largeStraight" ? 40
+          : category === "smallStraight" ? 30
+            : category === "fullHouse" ? 25
+              : category === "chance" || category === "threeKind" || category === "fourKind" ? 30
+                : (YATZY_CATEGORIES.indexOf(category) + 1) * 5,
+    }));
+    scored.sort((a, b) => {
+      const aRate = a.value / a.max;
+      const bRate = b.value / b.max;
+      if (a.value === 0 || b.value === 0) return a.value === b.value ? 0 : a.value === 0 ? 1 : -1;
+      return bRate - aRate;
+    });
+    this.applyYatzyAction("felix", { type: "score", category: scored[0].category }, socket);
+  }
+
+  playBotMemoryFlip(socket) {
+    const game = this.state.memory;
+    const available = game.cards
+      .map((card, index) => !card.matched && !game.revealed.includes(index) ? index : -1)
+      .filter((index) => index !== -1);
+    for (const index of game.revealed) game.botKnowledge[index] = game.cards[index].animal;
+    const revealedIndex = game.revealed[0];
+    let index;
+    if (revealedIndex !== undefined) {
+      index = available.find((candidate) =>
+        game.botKnowledge[candidate] === game.cards[revealedIndex].animal);
+    } else {
+      const known = new Map();
+      for (const candidate of available) {
+        const animal = game.botKnowledge[candidate];
+        if (animal && known.has(animal)) {
+          index = known.get(animal);
+          break;
+        }
+        if (animal) known.set(animal, candidate);
+      }
+    }
+    if (index === undefined) index = available[Math.floor(Math.random() * available.length)];
+    if (index === undefined) return;
+    game.botKnowledge[index] = game.cards[index].animal;
+    this.applyMemoryAction("felix", { type: "flip", index }, socket);
   }
 
   applyMemoryAction(account, action, socket) {
@@ -505,6 +777,9 @@ export class GameRoom {
     }
 
     game.revealed.push(action.index);
+    if (this.state.botEnabled && account !== "felix") {
+      game.botKnowledge[action.index] = game.cards[action.index].animal;
+    }
     if (game.revealed.length !== 2) return;
 
     const [firstIndex, secondIndex] = game.revealed;
@@ -538,7 +813,7 @@ export class GameRoom {
     }
     const sideAccount = action.card === 0 ? "felix" : "sonni";
     if (account !== sideAccount) {
-      this.sendError(socket, `Das ist die Seite von ${sideAccount === "sonni" ? "Sonni" : "Felix"}.`);
+      this.sendError(socket, `Das ist die Seite von ${this.state.playerNames[sideAccount]}.`);
       return;
     }
 
@@ -726,7 +1001,7 @@ export class GameRoom {
     return new Set(this.ctx.getWebSockets().map((socket) => {
       const attachment = socket.deserializeAttachment();
       return attachment && attachment.account;
-    }).filter(Boolean));
+    }).filter((account) => PLAYERS.includes(account)));
   }
 
   sendError(socket, message) {
