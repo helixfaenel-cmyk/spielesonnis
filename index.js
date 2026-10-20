@@ -31,14 +31,18 @@ function clearSessionCookie() {
 }
 
 // ===== API-Handler (ohne Anmeldung) =====
-async function handleLogin({ request }) {
+async function handlePlayerSelect({ request }) {
   let body;
   try {
     body = await request.json();
   } catch {
     return jsonResponse({ error: "Ungueltige Anfrage." }, { status: 400 });
   }
-  const account = body && (body.account === "sonni" || body.account === "felix") ? body.account : "sonni";
+  const account = body && (body.account === "sonni" || body.account === "felix")
+    ? body.account
+    : (body && body.player === "sonni" || body.player === "felix"
+      ? body.player
+      : "sonni");
   return jsonResponse(
     { account },
     { headers: { "Set-Cookie": sessionCookie(account) } },
@@ -100,22 +104,38 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Login / Spielerauswahl
     if (path === "/api/login" && request.method === "POST") {
-      return handleLogin({ request, env });
+      return handlePlayerSelect({ request, env });
+    }
+    if (path === "/api/players/select" && request.method === "POST") {
+      return handlePlayerSelect({ request, env });
     }
     if (path === "/api/logout" && request.method === "POST") {
       return handleLogout({ request, env });
     }
-    if (path === "/api/scoreboard" && request.method === "GET") {
-      return handleScoreboard({ request, env });
-    }
+
+    // Session
     if ((path === "/api/sessions" || path === "/api/session") && request.method === "GET") {
       return handleSessions({ request, env });
     }
 
-    const gameMatch = path.match(/^\/api\/games\/([\w-]+)$/);
+    // Scoreboard
+    if (path === "/api/scoreboard" && request.method === "GET") {
+      return handleScoreboard({ request, env });
+    }
+
+    // Spiele (WebSocket) — beide Routen-Muster
+    const gameMatch1 = path.match(/^\/api\/games\/([\w-]+)$/);
+    const gameMatch2 = path.match(/^\/api\/room\/([\w-]+)$/);
+    const gameMatch = gameMatch1 || gameMatch2;
     if (gameMatch) {
       return handleGame({ request, env, params: { game: gameMatch[1] } });
+    }
+
+    // Unbekannte API-Routen → JSON 404 statt HTML
+    if (path.startsWith("/api/")) {
+      return jsonResponse({ error: "Nicht gefunden." }, { status: 404 });
     }
 
     return env.ASSETS.fetch(request);
